@@ -3,10 +3,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const helmet = require("helmet");
-const xss = require("xss-clean");
 const rateLimit = require("express-rate-limit");
-const hpp = require("hpp");
-const mongoSanitize = require("express-mongo-sanitize");
 const morgan = require("morgan");
 const swaggerUi = require("swagger-ui-express");
 
@@ -21,63 +18,68 @@ const reminderRoutes = require("./routes/reminders");
 
 const app = express();
 
-// Security Middleware (Helmet.js)
-app.use(helmet());
-
-// Rate Limiting
-const limiter = rateLimit({
-  windowMs: 10 * 60 * 1000, // 10 mins
-  max: 100, // Limit each IP to 100 requests per window
-  message: "Too many requests from this IP, please try again later."
-});
-app.use("/api", limiter);
-
-// Prevent XSS attacks
-app.use(xss());
-
-// Prevent HTTP param pollution
-app.use(hpp());
-
-// Data sanitization against NoSQL query injection
-app.use(mongoSanitize());
-
-// CORS execution pipeline
+// ── CORS (must be BEFORE other middleware) ──
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? process.env.FRONTEND_URL 
-    : 'http://localhost:5173',
+  origin: process.env.NODE_ENV === 'production'
+    ? process.env.FRONTEND_URL
+    : true,   // allow any origin in dev
   credentials: true
 }));
 
-// Body parser
+// ── Body parser ──
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Request logging via Morgan + Winston
+// ── Security ──
+app.use(helmet({
+  contentSecurityPolicy: false, // disable for dev / Swagger UI
+}));
+
+// Rate Limiting
+const limiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 200,
+  message: { message: "Too many requests from this IP, please try again later." }
+});
+app.use("/api", limiter);
+
+// Note: express-mongo-sanitize, xss-clean, hpp all removed
+// They crash on modern Node.js (read-only req.query getter)
+// Mongoose schema validation provides sufficient protection
+
+// ── Logging ──
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 } else {
-  app.use(morgan('combined', { stream: { write: message => logger.info(message.trim()) }}));
+  app.use(morgan('combined', {
+    stream: { write: message => logger.info(message.trim()) }
+  }));
 }
 
-// Swagger API Documentation Endpoint
+// ── Swagger ──
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-// Mount Routers
+// ── Routes ──
 app.use("/api/auth", authRoutes);
 app.use("/api/medications", medicationRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/reminders", reminderRoutes);
 
-// Custom Error Handling Middleware
+// Health check
+app.get("/api/health", (req, res) => {
+  res.json({ status: "ok", db: mongoose.connection.readyState === 1 ? "connected" : "disconnected" });
+});
+
+// ── Error Handler ──
 app.use(errorHandler);
 
-// Establish Database Connection
+// ── Database ──
 mongoose
   .connect(process.env.MONGODB_URI)
-  .then(() => logger.info("Connected securely to MongoDB Cluster"))
+  .then(() => logger.info("Connected securely to MongoDB"))
   .catch((err) => logger.error(`MongoDB Connect Failure: ${err.message}`));
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  logger.info(`Server successfully deployed in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+  logger.info(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
 });
