@@ -5,6 +5,8 @@ import Landing from './pages/Landing';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import Profile from './pages/Profile';
+import HealthInsights from './pages/HealthInsights';
 import ChatAssistant from './components/ChatAssistant';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
@@ -21,7 +23,7 @@ function PrivateRoute({ children }) {
   return user ? children : <Navigate to="/login" replace />;
 }
 
-function PublicRoute({ children }) {
+function GuestOnly({ children }) {
   const { user, loading } = useAuth();
   if (loading) return null;
   return user ? <Navigate to="/dashboard" replace /> : children;
@@ -34,26 +36,26 @@ function AppRoutes() {
       <Navbar />
       <main className="flex-1 flex flex-col">
         <Routes>
-          {/* Landing Page is the root for non-authenticated users */}
-          <Route path="/" element={
-            <PublicRoute>
-              <Landing />
-            </PublicRoute>
-          } />
+          {/* Landing page — visible to everyone */}
+          <Route path="/" element={<Landing />} />
+
+          {/* Auth pages — redirect to dashboard if logged in */}
           <Route path="/login" element={
-            <PublicRoute>
+            <GuestOnly>
               <div className="container mx-auto px-4 max-w-6xl flex-1 flex flex-col pt-20">
                 <Login />
               </div>
-            </PublicRoute>
+            </GuestOnly>
           } />
           <Route path="/register" element={
-            <PublicRoute>
+            <GuestOnly>
               <div className="container mx-auto px-4 max-w-6xl flex-1 flex flex-col pt-20">
                 <Register />
               </div>
-            </PublicRoute>
+            </GuestOnly>
           } />
+
+          {/* Protected pages */}
           <Route path="/dashboard" element={
             <PrivateRoute>
               <div className="container mx-auto px-4 max-w-6xl flex-1 flex flex-col pt-20 pb-10">
@@ -62,7 +64,23 @@ function AppRoutes() {
               <ChatAssistant />
             </PrivateRoute>
           } />
-          {/* Catch all → redirect */}
+          <Route path="/profile" element={
+            <PrivateRoute>
+              <div className="container mx-auto px-4 max-w-6xl flex-1 flex flex-col pt-20 pb-10">
+                <Profile />
+              </div>
+            </PrivateRoute>
+          } />
+          <Route path="/health-insights" element={
+            <PrivateRoute>
+              <div className="container mx-auto px-4 max-w-6xl flex-1 flex flex-col pt-20 pb-10">
+                <HealthInsights />
+              </div>
+              <ChatAssistant />
+            </PrivateRoute>
+          } />
+
+          {/* Catch-all */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
@@ -76,7 +94,6 @@ function App() {
       <AuthProvider>
         <Router>
           <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300 relative">
-            {/* Background gradient blobs */}
             <div className="pointer-events-none fixed inset-0 overflow-hidden -z-10">
               <div className="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] rounded-full bg-primary-400/8 dark:bg-primary-600/8 blur-[100px]" />
               <div className="absolute -bottom-[10%] -right-[10%] w-[50%] h-[50%] rounded-full bg-indigo-400/8 dark:bg-indigo-600/6 blur-[120px]" />

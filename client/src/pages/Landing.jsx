@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { HeartPulse, Shield, Brain, Calendar, MessageSquare, Activity, ArrowRight, Zap, Clock, CheckCircle2 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useAuth } from '../context/AuthContext';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 30 },
@@ -9,6 +10,8 @@ const fadeUp = {
 };
 
 const Landing = () => {
+  const { user } = useAuth();
+  
   const features = [
     { icon: Brain, title: 'AI Risk Analysis', desc: 'Get instant drug interaction detection and risk scoring powered by OpenAI.', color: 'text-violet-600 dark:text-violet-400', bg: 'bg-violet-50 dark:bg-violet-900/20' },
     { icon: Calendar, title: 'Calendar View', desc: 'Visualize your medication schedule in a beautiful weekly calendar.', color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-900/20' },
@@ -61,17 +64,28 @@ const Landing = () => {
           <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={3}
             className="flex flex-col sm:flex-row gap-4 justify-center items-center"
           >
-            <Link to="/register"
-              className="group px-8 py-4 bg-primary-600 hover:bg-primary-700 text-white rounded-2xl font-bold text-lg shadow-xl shadow-primary-500/25 hover:shadow-primary-500/40 transition-all flex items-center gap-3"
-            >
-              Get Started Free
-              <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
-            </Link>
-            <Link to="/login"
-              className="px-8 py-4 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-white rounded-2xl font-bold text-lg border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all"
-            >
-              Sign In
-            </Link>
+            {user ? (
+              <Link to="/dashboard"
+                className="group px-8 py-4 bg-primary-600 hover:bg-primary-700 text-white rounded-2xl font-bold text-lg shadow-xl shadow-primary-500/25 hover:shadow-primary-500/40 transition-all flex items-center gap-3"
+              >
+                Go to Dashboard
+                <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+              </Link>
+            ) : (
+              <>
+                <Link to="/register"
+                  className="group px-8 py-4 bg-primary-600 hover:bg-primary-700 text-white rounded-2xl font-bold text-lg shadow-xl shadow-primary-500/25 hover:shadow-primary-500/40 transition-all flex items-center gap-3"
+                >
+                  Get Started Free
+                  <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                </Link>
+                <Link to="/login"
+                  className="px-8 py-4 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-white rounded-2xl font-bold text-lg border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all"
+                >
+                  Sign In
+                </Link>
+              </>
+            )}
           </motion.div>
 
           {/* Stats */}
@@ -168,11 +182,19 @@ const Landing = () => {
             <p className="text-slate-600 dark:text-slate-400 font-medium mb-10 max-w-xl mx-auto leading-relaxed">
               Join thousands of patients who trust MediGuide AI to keep their medication routine safe and optimized.
             </p>
-            <Link to="/register"
-              className="inline-flex items-center gap-3 px-10 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-bold text-lg hover:opacity-90 shadow-xl transition-all"
-            >
-              Create Your Free Account <ArrowRight size={20} />
-            </Link>
+            {user ? (
+              <Link to="/dashboard"
+                className="inline-flex items-center gap-3 px-10 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-bold text-lg hover:opacity-90 shadow-xl transition-all"
+              >
+                Go to Dashboard <ArrowRight size={20} />
+              </Link>
+            ) : (
+              <Link to="/register"
+                className="inline-flex items-center gap-3 px-10 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-bold text-lg hover:opacity-90 shadow-xl transition-all"
+              >
+                Create Your Free Account <ArrowRight size={20} />
+              </Link>
+            )}
           </div>
         </motion.div>
       </section>
