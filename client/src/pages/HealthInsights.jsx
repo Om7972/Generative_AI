@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Brain, Pill, AlertTriangle, CheckCircle, Zap, Clock, Shield, ChevronRight, Loader2, Info } from 'lucide-react';
+import { Brain, Pill, AlertTriangle, CheckCircle, Zap, Clock, Shield, ChevronRight, Loader2, Info, Activity } from 'lucide-react';
 
 // ─── Reusable Components ───
 
@@ -32,8 +32,8 @@ const DosageCard = ({ item, index }) => (
           <Pill size={20} />
         </div>
         <div>
-          <h3 className="text-base font-bold text-slate-800 dark:text-white">{item.medication}</h3>
-          <p className="text-sm text-primary-600 dark:text-primary-400 font-semibold">{item.recommendedDosage}</p>
+          <h3 className="text-base font-bold text-slate-800 dark:text-white">{item.medicine}</h3>
+          <p className="text-sm text-primary-600 dark:text-primary-400 font-semibold">{item.recommended_range}</p>
         </div>
       </div>
     </div>
@@ -41,16 +41,6 @@ const DosageCard = ({ item, index }) => (
       <Clock size={14} className="text-indigo-500" />
       <span>{item.timing}</span>
     </div>
-    {item.precautions?.length > 0 && (
-      <div className="mt-3 space-y-1.5">
-        <h4 className="text-xs font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider flex items-center gap-1">
-          <AlertTriangle size={12} /> Precautions
-        </h4>
-        {item.precautions.map((p, i) => (
-          <div key={i} className="text-xs text-slate-600 dark:text-slate-400 pl-4 border-l-2 border-amber-300 dark:border-amber-700 font-medium">{p}</div>
-        ))}
-      </div>
-    )}
     {item.notes && (
       <p className="mt-3 text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg border border-slate-100 dark:border-slate-700 font-medium">{item.notes}</p>
     )}
@@ -82,10 +72,10 @@ const InteractionAlert = ({ item, index }) => {
             ))}
             <RiskBadge severity={item.severity} />
           </div>
-          <p className={`text-sm font-semibold ${c.text} mb-2`}>{item.description}</p>
+          <p className={`text-sm font-semibold ${c.text} mb-2`}>{item.issue}</p>
           <div className="flex items-start gap-2 bg-white/60 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-100 dark:border-slate-700">
             <ChevronRight size={14} className="text-primary-500 mt-0.5 flex-shrink-0" />
-            <p className="text-xs text-slate-700 dark:text-slate-300 font-medium">{item.recommendation}</p>
+            <p className="text-xs text-slate-700 dark:text-slate-300 font-medium">{item.advice}</p>
           </div>
         </div>
       </div>
@@ -113,12 +103,9 @@ const HealthInsights = () => {
   const [loading, setLoading] = useState(true);
 
   // AI Results
-  const [dosagePlan, setDosagePlan] = useState(null);
-  const [interactions, setInteractions] = useState(null);
-  const [genDosage, setGenDosage] = useState(false);
-  const [genInteractions, setGenInteractions] = useState(false);
-  const [dosageError, setDosageError] = useState('');
-  const [interactionError, setInteractionError] = useState('');
+  const [analysis, setAnalysis] = useState(null);
+  const [generating, setGenerating] = useState(false);
+  const [errorLine, setErrorLine] = useState('');
 
   const api = axios.create({ baseURL: 'http://localhost:5000/api', headers: { Authorization: `Bearer ${user?.token}` } });
 
@@ -137,12 +124,14 @@ const HealthInsights = () => {
     init();
   }, []);
 
-  const generateDosage = async () => {
-    if (!healthProfile?.age || !healthProfile?.weight) return setDosageError('Complete your health profile first (age & weight required). Go to Profile page.');
-    if (medications.length === 0) return setDosageError('Add at least one medication from the Dashboard first.');
-    setGenDosage(true); setDosageError(''); setDosagePlan(null);
+  const generateFullAnalysis = async () => {
+    if (!healthProfile?.age || !healthProfile?.weight) return setErrorLine('Complete your health profile first (age & weight required). Go to Profile page.');
+    if (medications.length === 0) return setErrorLine('Add at least one medication from the Dashboard first.');
+    setGenerating(true); 
+    setErrorLine(''); 
+    setAnalysis(null);
     try {
-      const { data } = await api.post('/ai/personalized-dosage', {
+      const { data } = await api.post('/ai/full-analysis', {
         age: healthProfile.age,
         weight: healthProfile.weight,
         gender: healthProfile.gender,
@@ -150,25 +139,10 @@ const HealthInsights = () => {
         allergies: healthProfile.allergies,
         medications: medications.map(m => ({ name: m.name })),
       });
-      setDosagePlan(data);
+      setAnalysis(data);
     } catch (err) {
-      setDosageError(err.response?.data?.message || 'Failed to generate dosage plan. Check your OpenAI API key.');
-    } finally { setGenDosage(false); }
-  };
-
-  const checkInteractions = async () => {
-    if (medications.length < 2) return setInteractionError('At least 2 medications needed to check interactions.');
-    setGenInteractions(true); setInteractionError(''); setInteractions(null);
-    try {
-      const { data } = await api.post('/ai/check-interactions', {
-        medications: medications.map(m => ({ name: m.name })),
-        conditions: healthProfile?.conditions,
-        allergies: healthProfile?.allergies,
-      });
-      setInteractions(data);
-    } catch (err) {
-      setInteractionError(err.response?.data?.message || 'Failed to check interactions. Check your OpenAI API key.');
-    } finally { setGenInteractions(false); }
+      setErrorLine(err.response?.data?.message || 'Failed to generate comprehensive AI guidance.');
+    } finally { setGenerating(false); }
   };
 
   if (loading) return (
@@ -178,13 +152,13 @@ const HealthInsights = () => {
   );
 
   return (
-    <div className="py-8 animate-fade-in">
+    <div className="py-8 animate-fade-in text-slate-900 dark:text-slate-100">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-extrabold tracking-tight flex items-center gap-3">
           <Brain className="text-primary-600 dark:text-primary-400" size={32} /> AI Health <span className="font-light">Insights</span>
         </h1>
-        <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium">Personalized dosage plans and drug interaction analysis powered by AI.</p>
+        <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium">Comprehensive AI-powered analysis of your daily regimen.</p>
       </div>
 
       {/* Disclaimer */}
@@ -217,105 +191,110 @@ const HealthInsights = () => {
         </div>
       </div>
 
-      {/* Action Buttons */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
-        <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }} onClick={generateDosage} disabled={genDosage}
-          className="flex items-center gap-4 p-5 bg-gradient-to-br from-primary-600 to-primary-700 text-white rounded-2xl shadow-xl shadow-primary-500/20 font-bold transition disabled:opacity-60">
-          {genDosage ? <Loader2 size={24} className="animate-spin" /> : <Zap size={24} />}
+      {/* Action Button */}
+      <div className="mb-10 flex justify-start">
+        <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={generateFullAnalysis} disabled={generating}
+          className="flex items-center gap-4 px-8 py-5 w-full md:w-auto bg-gradient-to-r from-indigo-600 to-primary-600 text-white rounded-2xl shadow-xl shadow-indigo-500/20 font-bold transition disabled:opacity-60">
+          {generating ? <Loader2 size={24} className="animate-spin" /> : <Activity size={24} />}
           <div className="text-left">
-            <div className="text-base">Generate Personalized Dosage</div>
-            <div className="text-xs text-primary-200 font-medium">AI-adjusted for your profile</div>
-          </div>
-        </motion.button>
-
-        <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }} onClick={checkInteractions} disabled={genInteractions}
-          className="flex items-center gap-4 p-5 bg-gradient-to-br from-indigo-600 to-indigo-700 text-white rounded-2xl shadow-xl shadow-indigo-500/20 font-bold transition disabled:opacity-60">
-          {genInteractions ? <Loader2 size={24} className="animate-spin" /> : <Shield size={24} />}
-          <div className="text-left">
-            <div className="text-base">Check Drug Interactions</div>
-            <div className="text-xs text-indigo-200 font-medium">Detect conflicts between medications</div>
+            <div className="text-base">Run Comprehensive AI Scan</div>
+            <div className="text-xs text-indigo-100 font-normal">Dosage • Interactions • Tips</div>
           </div>
         </motion.button>
       </div>
 
-      {/* Dosage Error */}
-      {dosageError && (
+      {/* API Error */}
+      {errorLine && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-6 flex items-center gap-3 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 p-4 rounded-xl border border-red-200 dark:border-red-800">
-          <AlertTriangle size={18} /> <span className="font-semibold text-sm">{dosageError}</span>
-        </motion.div>
-      )}
-      {interactionError && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-6 flex items-center gap-3 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 p-4 rounded-xl border border-red-200 dark:border-red-800">
-          <AlertTriangle size={18} /> <span className="font-semibold text-sm">{interactionError}</span>
+          <AlertTriangle size={18} /> <span className="font-semibold text-sm">{errorLine}</span>
         </motion.div>
       )}
 
       {/* Loading Skeletons */}
       <AnimatePresence>
-        {genDosage && (
+        {generating && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="mb-10">
-            <h2 className="text-xl font-bold mb-4 flex items-center gap-2"><Loader2 size={20} className="animate-spin text-primary-500" /> Generating Dosage Plan...</h2>
+            <h2 className="text-xl font-bold mb-4 flex items-center gap-2"><Loader2 size={20} className="animate-spin text-primary-500" /> Computing Medical Insights...</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">{[1, 2, 3, 4].map(i => <SkeletonCard key={i} />)}</div>
-          </motion.div>
-        )}
-        {genInteractions && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="mb-10">
-            <h2 className="text-xl font-bold mb-4 flex items-center gap-2"><Loader2 size={20} className="animate-spin text-indigo-500" /> Analyzing Interactions...</h2>
-            <div className="space-y-4">{[1, 2].map(i => <SkeletonCard key={i} />)}</div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Dosage Plan Results */}
-      {dosagePlan && (
-        <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-10">
-          <h2 className="text-xl font-bold mb-5 flex items-center gap-2">
-            <Zap size={20} className="text-primary-500" /> Personalized Dosage Plan
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {dosagePlan.dosagePlan?.map((item, i) => (
-              <DosageCard key={i} item={item} index={i} />
-            ))}
-          </div>
-          {dosagePlan.generalAdvice && (
-            <div className="mt-5 p-5 bg-primary-50 dark:bg-primary-900/20 rounded-2xl border border-primary-200 dark:border-primary-800/50">
-              <h3 className="text-sm font-bold text-primary-800 dark:text-primary-400 mb-2 flex items-center gap-2"><Info size={16} /> General Advice</h3>
-              <p className="text-sm text-primary-700 dark:text-primary-300 font-medium">{dosagePlan.generalAdvice}</p>
+      {/* Results */}
+      {analysis && (
+        <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-10">
+          
+          {/* Top Info Banner - Overall Risk */}
+          <div className="flex items-center justify-between p-5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div className="flex items-center gap-3">
+              <Shield size={24} className="text-primary-500" />
+              <div>
+                <h3 className="font-bold text-lg">Overall Profile Risk</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium tracking-wide">Based on interactions & warnings</p>
+              </div>
             </div>
-          )}
-        </motion.section>
-      )}
-
-      {/* Interaction Results */}
-      {interactions && (
-        <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="text-xl font-bold flex items-center gap-2">
-              <Shield size={20} className="text-indigo-500" /> Drug Interaction Analysis
-            </h2>
-            {interactions.overallRisk && <RiskBadge severity={interactions.overallRisk} />}
+            {analysis.riskScore && <RiskBadge severity={analysis.riskScore} />}
           </div>
 
-          {interactions.interactions?.length > 0 ? (
-            <div className="space-y-4">
-              {interactions.interactions.map((item, i) => (
-                <InteractionAlert key={i} item={item} index={i} />
+          {/* Warnings Section (if any) */}
+          {analysis.warnings?.length > 0 && (
+             <div className="p-6 bg-red-50 dark:bg-red-900/10 rounded-2xl border border-red-200 dark:border-red-900/50">
+               <h3 className="font-bold text-red-800 dark:text-red-400 mb-4 flex items-center gap-2"><AlertTriangle size={20} /> Critical Warnings</h3>
+               <ul className="space-y-2 list-disc pl-5 text-sm text-red-700 dark:text-red-300 font-medium">
+                 {analysis.warnings.map(w => <li key={w}>{w}</li>)}
+               </ul>
+             </div>
+          )}
+
+          {/* Dosage Plan */}
+          <div>
+            <h2 className="text-xl font-bold mb-5 flex items-center gap-2">
+              <Zap size={20} className="text-primary-500" /> Optimized Dosage Plan
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {analysis.dosage_plan?.map((item, i) => (
+                <DosageCard key={i} item={item} index={i} />
               ))}
             </div>
-          ) : (
-            <div className="text-center py-12 glass-card rounded-2xl">
-              <CheckCircle size={48} className="mx-auto text-emerald-500 mb-4" />
-              <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-1">No Interactions Detected</h3>
-              <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Your current medications appear safe to use together.</p>
-            </div>
-          )}
+          </div>
 
-          {interactions.summary && (
-            <div className="mt-5 p-5 bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl border border-indigo-200 dark:border-indigo-800/50">
-              <h3 className="text-sm font-bold text-indigo-800 dark:text-indigo-400 mb-2 flex items-center gap-2"><Info size={16} /> Safety Summary</h3>
-              <p className="text-sm text-indigo-700 dark:text-indigo-300 font-medium">{interactions.summary}</p>
+          {/* Interactions */}
+          <div>
+            <h2 className="text-xl font-bold mb-5 flex items-center gap-2">
+              <Shield size={20} className="text-indigo-500" /> Drug Interactions
+            </h2>
+            {analysis.interactions?.length > 0 ? (
+              <div className="space-y-4">
+                {analysis.interactions.map((item, i) => (
+                  <InteractionAlert key={i} item={item} index={i} />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12 glass-card rounded-2xl">
+                <CheckCircle size={48} className="mx-auto text-emerald-500 mb-4" />
+                <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-1">No Interactions Detected</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Your current medications appear safe to use together.</p>
+              </div>
+            )}
+          </div>
+
+          {/* Missed Dose & Lifestyle */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="glass-card p-6 rounded-2xl border border-slate-200 dark:border-slate-800">
+               <h3 className="font-bold text-slate-800 dark:text-white mb-3 flex items-center gap-2"><Clock size={16} className="text-amber-500"/> Missed Dose Plan</h3>
+               <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
+                 {analysis.missed_dose || "If you miss a dose, consult your doctor or pharmacist immediately."}
+               </p>
             </div>
-          )}
+            
+            <div className="glass-card p-6 rounded-2xl border border-slate-200 dark:border-slate-800">
+               <h3 className="font-bold text-slate-800 dark:text-white mb-3 flex items-center gap-2"><HeartPulse size={16} className="text-emerald-500"/> Lifestyle Recommendations</h3>
+               <ul className="space-y-2 list-disc pl-5 text-sm text-slate-600 dark:text-slate-300 font-medium">
+                 {analysis.lifestyle_tips?.map((tip, i) => <li key={i}>{tip}</li>)}
+               </ul>
+            </div>
+          </div>
+
         </motion.section>
       )}
     </div>
