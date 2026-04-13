@@ -11,3 +11,11 @@ export { default as Sidebar } from './Sidebar';
 export { default as AdherenceChart } from './AdherenceChart';
 export { default as RiskHeatmap } from './RiskHeatmap';
 export { default as InsightTimeline } from './InsightTimeline';
+
+// New AI Feature Components
+export { default as VoiceAssistant } from './VoiceAssistant';
+export { default as DailySummaryCard } from './DailySummaryCard';
+export { default as EmergencyAlert } from './EmergencyAlert';
+export { default as MissedDoseRecovery } from './MissedDoseRecovery';
+export { default as SimulationGraph } from './SimulationGraph';
+export { default as ScenarioEditor } from './ScenarioEditor';

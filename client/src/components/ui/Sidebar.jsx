@@ -10,6 +10,7 @@ import { useAuth } from '../../context/AuthContext';
 const navItems = [
   { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { path: '/health-insights', icon: Brain, label: 'AI Insights' },
+  { path: '/simulation', icon: Activity, label: 'Digital Twin' },
   { path: '/profile', icon: User, label: 'Profile' },
 ];
 

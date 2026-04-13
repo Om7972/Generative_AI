@@ -8,9 +8,17 @@ const userSchema = new mongoose.Schema(
     email: { type: String, default: "", trim: true },
     displayName: { type: String, default: "" },
     avatar: { type: String, default: "" },
+    refreshToken: { type: String, default: null },
+    notificationPrefs: {
+      emailReminders: { type: Boolean, default: false },
+      browserNotifications: { type: Boolean, default: true },
+      dailySummary: { type: Boolean, default: true },
+    },
   },
   { timestamps: true }
 );
+
+userSchema.index({ email: 1 });
 
 userSchema.pre("save", async function () {
   if (!this.isModified("password")) return;

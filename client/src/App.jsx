@@ -7,10 +7,11 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Profile from './pages/Profile';
 import HealthInsights from './pages/HealthInsights';
+import HealthSimulationLab from './pages/HealthSimulationLab';
 import ChatAssistant from './components/ChatAssistant';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
-import { Sidebar, ToastProvider, PageTransition } from './components/ui';
+import { Sidebar, ToastProvider, PageTransition, VoiceAssistant } from './components/ui';
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth();
@@ -95,6 +96,7 @@ function AppRoutes() {
                     <Dashboard />
                   </div>
                   <ChatAssistant />
+                  <VoiceAssistant />
                 </PrivateRoute>
               } />
               <Route path="/profile" element={
@@ -110,6 +112,16 @@ function AppRoutes() {
                     <HealthInsights />
                   </div>
                   <ChatAssistant />
+                  <VoiceAssistant />
+                </PrivateRoute>
+              } />
+              <Route path="/simulation" element={
+                <PrivateRoute>
+                  <div className="px-4 lg:px-8 flex-1 flex flex-col pt-20 pb-10 max-w-[1400px]">
+                    <HealthSimulationLab />
+                  </div>
+                  <ChatAssistant />
+                  <VoiceAssistant />
                 </PrivateRoute>
               } />
 

@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import {
   Plus, Clock, Pill, Trash2, Edit2, Zap, X, ShieldAlert, AlertTriangle,
   Lightbulb, Activity, Calendar as CalIcon, History, Bell, Mail, Sparkles,
-  TrendingUp, ChevronRight
+  TrendingUp, ChevronRight, CheckCircle, Mic
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, startOfWeek, addDays, isSameDay } from 'date-fns';
@@ -22,6 +22,9 @@ import {
   AIInsightCard,
   WarningAlert,
   ShimmerSkeleton,
+  DailySummaryCard,
+  EmergencyAlert,
+  MissedDoseRecovery,
 } from '../components/ui';
 import FloatingInput, { FloatingSelect } from '../components/ui/FloatingInput';
 
@@ -58,6 +61,11 @@ const Dashboard = () => {
   const [reminderConfig, setReminderConfig] = useState({ email: '', sms: false });
   const [sendingReminder, setSendingReminder] = useState(false);
 
+  // NEW: AI Risk Score State
+  const [riskData, setRiskData] = useState(null);
+  const [emergencyAlert, setEmergencyAlert] = useState(null);
+  const [missedDoseMed, setMissedDoseMed] = useState(null);
+
   const fetchMedications = async () => {
     try {
       const { data } = await axios.get('http://localhost:5000/api/medications', {
@@ -85,7 +93,40 @@ const Dashboard = () => {
   useEffect(() => {
     fetchMedications();
     fetchHistory();
+    fetchRiskScore();
   }, []);
+
+  // Fetch AI Risk Score
+  const fetchRiskScore = async () => {
+    try {
+      const { data } = await axios.post('http://localhost:5000/api/ai/risk-score', {}, {
+        headers: { Authorization: `Bearer ${user.token}` }
+      });
+      setRiskData(data);
+      // Check for emergency
+      if (data.emergency) {
+        setEmergencyAlert({
+          title: 'Critical Health Risk',
+          message: data.emergency_message || 'Severe interaction detected. Contact your healthcare provider.',
+        });
+      }
+    } catch (err) {
+      console.error('Risk score fetch failed:', err);
+    }
+  };
+
+  // Mark medication as taken
+  const markAsTaken = async (medId) => {
+    try {
+      await axios.post('http://localhost:5000/api/ai/mark-taken', { medicationId: medId }, {
+        headers: { Authorization: `Bearer ${user.token}` }
+      });
+      toast.success('Medication marked as taken!');
+      fetchMedications();
+    } catch (err) {
+      toast.error('Failed to mark as taken');
+    }
+  };
 
   const handleOpenMedModal = (med = null) => {
     if (med) {
@@ -343,6 +384,8 @@ const Dashboard = () => {
                         index={i}
                         onEdit={handleOpenMedModal}
                         onDelete={handleDelete}
+                        onMarkTaken={markAsTaken}
+                        onMissedDose={setMissedDoseMed}
                       />
                     ))}
                   </div>
@@ -354,14 +397,51 @@ const Dashboard = () => {
 
               {/* Right Sidebar */}
               <div className="space-y-4">
-                {/* Risk Score */}
+                {/* AI Daily Summary */}
+                <DailySummaryCard />
+
+                {/* Risk Score — from real AI calculation */}
                 <div className="glass-card rounded-2xl p-6 flex justify-center">
                   <RiskScoreMeter
-                    score={medications.length > 3 ? 72 : medications.length > 1 ? 38 : 15}
-                    label="Overall Risk"
-                    severity={medications.length > 3 ? 'high' : medications.length > 1 ? 'medium' : 'low'}
+                    score={riskData?.score ?? (medications.length > 3 ? 72 : medications.length > 1 ? 38 : 15)}
+                    label="AI Health Risk"
+                    severity={riskData?.level === 'safe' ? 'low' : riskData?.level === 'moderate' ? 'medium' : riskData?.level || (medications.length > 3 ? 'high' : medications.length > 1 ? 'medium' : 'low')}
                   />
                 </div>
+
+                {/* Risk Breakdown */}
+                {riskData?.breakdown && (
+                  <div className="glass-card rounded-2xl p-5 border border-slate-200 dark:border-slate-800">
+                    <h3 className="text-sm font-bold text-slate-800 dark:text-white mb-3 flex items-center gap-2">
+                      <div className="p-1.5 bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 rounded-lg"><Activity size={14} /></div>
+                      Risk Breakdown
+                    </h3>
+                    <div className="space-y-3">
+                      {[{ label: 'Interactions', value: riskData.breakdown.interaction_risk, color: 'primary' },
+                        { label: 'Conditions', value: riskData.breakdown.condition_risk, color: 'amber' },
+                        { label: 'Adherence', value: riskData.breakdown.adherence_risk, color: 'accent' }].map((item, i) => (
+                        <div key={i}>
+                          <div className="flex justify-between text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1">
+                            <span>{item.label}</span><span>{item.value}%</span>
+                          </div>
+                          <div className="h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                            <motion.div initial={{width:0}} animate={{width:`${item.value}%`}} transition={{duration:1, delay:0.3+i*0.15}} className={`h-full rounded-full ${
+                              item.color === 'primary' ? 'bg-primary-500' : item.color === 'amber' ? 'bg-amber-500' : 'bg-accent-500'
+                            }`} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {riskData.explanation && (
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 font-medium leading-relaxed">{riskData.explanation}</p>
+                    )}
+                  </div>
+                )}
+
+                {/* Missed Dose Recovery Panel */}
+                {missedDoseMed && (
+                  <MissedDoseRecovery medication={missedDoseMed} onClose={() => setMissedDoseMed(null)} />
+                )}
 
                 {/* AI Insight Timeline */}
                 <InsightTimeline />
@@ -476,7 +556,7 @@ const Dashboard = () => {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {medications.map((med, i) => (
-                  <MedicationCard key={med._id} med={med} index={i} onEdit={handleOpenMedModal} onDelete={handleDelete} />
+                  <MedicationCard key={med._id} med={med} index={i} onEdit={handleOpenMedModal} onDelete={handleDelete} onMarkTaken={markAsTaken} onMissedDose={setMissedDoseMed} />
                 ))}
               </div>
             )}
@@ -734,6 +814,14 @@ const Dashboard = () => {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Emergency Alert Overlay */}
+      {emergencyAlert && (
+        <EmergencyAlert
+          alert={emergencyAlert}
+          onDismiss={() => setEmergencyAlert(null)}
+        />
+      )}
     </div>
   );
 };

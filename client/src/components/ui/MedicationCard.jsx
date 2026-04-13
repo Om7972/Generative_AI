@@ -1,8 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Pill, Clock, Edit2, Trash2, MoreVertical } from 'lucide-react';
+import { Pill, Clock, Edit2, Trash2, MoreVertical, CheckCircle, AlertTriangle } from 'lucide-react';
 
-const MedicationCard = ({ med, onEdit, onDelete, index = 0 }) => {
+const MedicationCard = ({ med, onEdit, onDelete, onMarkTaken, onMissedDose, index = 0 }) => {
   const freqColor = {
     daily: 'bg-primary-50 text-primary-700 border-primary-200 dark:bg-primary-900/30 dark:text-primary-300 dark:border-primary-800',
     weekly: 'bg-cyan-50 text-cyan-700 border-cyan-200 dark:bg-cyan-900/30 dark:text-cyan-300 dark:border-cyan-800',
@@ -26,8 +26,8 @@ const MedicationCard = ({ med, onEdit, onDelete, index = 0 }) => {
             <div className="p-2.5 bg-gradient-to-br from-primary-100 to-primary-50 dark:from-primary-900/50 dark:to-primary-800/30 rounded-xl text-primary-600 dark:text-primary-400 border border-primary-200/50 dark:border-primary-700/50 shadow-sm">
               <Pill size={20} />
             </div>
-            {/* Neon green online dot */}
-            <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-accent-400 rounded-full border-2 border-white dark:border-slate-800 shadow-sm" />
+            {/* Neon green online dot if taken, amber if not */}
+            <div className={`absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-slate-800 shadow-sm ${med.takenToday ? 'bg-accent-400' : 'bg-amber-400 animate-pulse'}`} />
           </div>
           <div className="min-w-0">
             <h3 className="text-[15px] font-bold text-slate-800 dark:text-white leading-tight truncate max-w-[180px]">
@@ -41,6 +41,24 @@ const MedicationCard = ({ med, onEdit, onDelete, index = 0 }) => {
 
         {/* Actions */}
         <div className="flex gap-0.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-200">
+          {onMarkTaken && !med.takenToday && (
+            <button
+              onClick={() => onMarkTaken(med._id)}
+              className="p-1.5 text-slate-400 hover:text-accent-600 hover:bg-accent-50 dark:hover:bg-slate-800 rounded-lg transition-colors"
+              title="Mark as taken"
+            >
+              <CheckCircle size={14} />
+            </button>
+          )}
+          {onMissedDose && !med.takenToday && (
+            <button
+              onClick={() => onMissedDose(med)}
+              className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-slate-800 rounded-lg transition-colors"
+              title="Missed dose options"
+            >
+              <AlertTriangle size={14} />
+            </button>
+          )}
           {onEdit && (
             <button
               onClick={() => onEdit(med)}
