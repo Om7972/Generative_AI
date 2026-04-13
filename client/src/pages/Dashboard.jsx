@@ -183,10 +183,19 @@ const Dashboard = () => {
         conditions: profile.conditions ? profile.conditions.split(',').map(s => s.trim()) : [],
         allergies: profile.allergies ? profile.allergies.split(',').map(s => s.trim()) : [],
       };
-      const { data } = await axios.post('http://localhost:5000/api/ai/generate-guidance', payload, {
+      const { data } = await axios.post('http://localhost:5000/api/ai/full-analysis', payload, {
         headers: { Authorization: `Bearer ${user.token}` }
       });
-      setGuidanceResult(data);
+      
+      const mappedResult = {
+        ...data,
+        riskLevel: data.riskScore,
+        reminders: data.dosage_plan ? data.dosage_plan.map(d => `${d.medicine}: ${d.timing} - ${d.notes}`) : [],
+        interactions: data.interactions ? data.interactions.map(i => `${i.drugs.join(' & ')}: ${i.issue}`) : [],
+        tips: data.lifestyle_tips || []
+      };
+      
+      setGuidanceResult(mappedResult);
       fetchHistory();
       toast.success('AI analysis complete');
     } catch (err) {

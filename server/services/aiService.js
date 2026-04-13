@@ -107,7 +107,7 @@ const reportScannerSchema = z.object({
 
 // ─── Helpers ───
 
-const isMockMode = () => !process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY === "your_openai_api_key_here";
+const isMockMode = () => true; // Forced true until quota is resolved
 
 async function callOpenAI(systemPrompt, userPrompt, schema, retries = 3) {
   if (isMockMode()) return null; // caller handles mock
