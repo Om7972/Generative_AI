@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Brain, User, HeartPulse, ChevronLeft, ChevronRight,
-  LogOut, Settings, Pill, Activity, X
+  LogOut, Settings, Pill, Activity, X, Target
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -11,6 +11,7 @@ const navItems = [
   { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { path: '/health-insights', icon: Brain, label: 'AI Insights' },
   { path: '/simulation', icon: Activity, label: 'Digital Twin' },
+  { path: '/coach', icon: Target, label: 'Health Coach' },
   { path: '/profile', icon: User, label: 'Profile' },
 ];
 

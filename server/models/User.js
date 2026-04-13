@@ -14,6 +14,9 @@ const userSchema = new mongoose.Schema(
       browserNotifications: { type: Boolean, default: true },
       dailySummary: { type: Boolean, default: true },
     },
+    streakCount: { type: Number, default: 0 },
+    longestStreak: { type: Number, default: 0 },
+    lastAdherenceDate: { type: String, default: null }, // YYYY-MM-DD
   },
   { timestamps: true }
 );

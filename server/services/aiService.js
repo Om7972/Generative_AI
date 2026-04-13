@@ -84,6 +84,13 @@ const healthSimulationSchema = z.object({
   }))
 });
 
+const adherenceCoachSchema = z.object({
+  message: z.string(),
+  insights: z.array(z.string()),
+  tips: z.array(z.string()),
+  nudge: z.string()
+});
+
 // ─── Helpers ───
 
 const isMockMode = () => !process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY === "your_openai_api_key_here";
@@ -291,6 +298,28 @@ Simulate the 24-hour cycle. Map out energy peaks/crashes, risks, and side effect
   return await callOpenAI(SIMULATION_SYSTEM, prompt, healthSimulationSchema);
 }
 
+// ─── 8. Adherence Coach (NEW) ───
+
+const ADHERENCE_COACH_SYSTEM = `You are a personalized medication adherence coach. Analyze the user's adherence history and provide behavioral insights, motivation, and practical nudges.
+OUTPUT strictly valid JSON:
+{
+  "message": "Friendly, encouraging chat-like message",
+  "insights": ["Observation about their patterns", "E.g., You miss evening doses often"],
+  "tips": ["Actionable habit-building tip"],
+  "nudge": "Short, smart notification text. E.g., 'Set a wind-down reminder tonight!'"
+}`;
+
+async function generateAdherenceCoaching(profile, adherenceHistory, currentStreak) {
+  if (isMockMode()) return getMockAdherenceCoaching(currentStreak);
+
+  const prompt = `Patient: ${profile.age || "?"} y/o, Conditions: ${(profile.conditions || []).join(", ") || "None"}.
+Current Streak: ${currentStreak} days.
+Recent Adherence Records (last 7 days): ${JSON.stringify(adherenceHistory)}
+Act as a health coach. Spot any patterns in missed or delayed doses, and offer motivational advice.`;
+  
+  return await callOpenAI(ADHERENCE_COACH_SYSTEM, prompt, adherenceCoachSchema);
+}
+
 // ─── 6. Chat Response (enhanced) ───
 
 async function generateChatResponse(question, profile, medications) {
@@ -418,6 +447,17 @@ function getMockSimulation(medications) {
   return { hourlyPrediction };
 }
 
+function getMockAdherenceCoaching(currentStreak) {
+  return {
+    message: currentStreak > 3 
+      ? `You're on fire! 🔥 A ${currentStreak}-day streak is amazing. Keep up the great momentum.`
+      : `Let's get back on track! Remember, every pill counts towards your long-term health.`,
+    insights: ["You tend to take morning doses on time, but evenings are tricky.", "Weekend adherence is slightly lower."],
+    tips: ["Pair your evening medication with brushing your teeth.", "Keep a water bottle near your bed."],
+    nudge: "Try setting a 9 PM wind-down alarm tonight!"
+  };
+}
+
 module.exports = {
   generateFullAnalysis,
   generateChatResponse,
@@ -426,4 +466,5 @@ module.exports = {
   optimizeMedicationSchedule,
   generateDailySummary,
   simulateHealth,
+  generateAdherenceCoaching,
 };

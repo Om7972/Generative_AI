@@ -7,6 +7,8 @@ const DailySummary = require("../models/DailySummary");
 const Medication = require("../models/Medication");
 const HealthProfile = require("../models/HealthProfile");
 const Simulation = require("../models/Simulation");
+const Adherence = require("../models/Adherence");
+const User = require("../models/User");
 const aiService = require("../services/aiService");
 const logger = require("../utils/logger");
 
@@ -210,7 +212,35 @@ router.post("/mark-taken", protect, async (req, res, next) => {
       { new: true }
     );
     if (!med) return res.status(404).json({ message: "Medication not found" });
-    res.json({ message: "Marked as taken", medication: med });
+
+    // Gamification System: Increment streak and save Adherence record
+    const today = new Date().toISOString().split("T")[0];
+    
+    // Write adherence log
+    await Adherence.findOneAndUpdate(
+      { userId: req.user, medicationId, date: today },
+      { status: "taken" },
+      { upsert: true, new: true }
+    );
+
+    // Update user streak if this is the first med taken today
+    const user = await User.findById(req.user);
+    if (user && user.lastAdherenceDate !== today) {
+      // Check if they took something yesterday to maintain streak
+      const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
+      if (user.lastAdherenceDate === yesterday) {
+        user.streakCount += 1;
+      } else if (user.lastAdherenceDate !== today) {
+        user.streakCount = 1; // reset streak if missed a day
+      }
+      user.lastAdherenceDate = today;
+      if (user.streakCount > user.longestStreak) {
+        user.longestStreak = user.streakCount;
+      }
+      await user.save();
+    }
+
+    res.json({ message: "Marked as taken", medication: med, streak: user ? user.streakCount : 0 });
   } catch (error) {
     next(error);
   }
@@ -289,6 +319,46 @@ router.post("/simulate-health", protect, async (req, res, next) => {
     
     logger.info(`[AI] Digital Twin Simulation completed for user ${req.user}`);
     res.json({ id: simulationRecord._id, ...simulationResult });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ─── Adherence Coach (NEW) ───
+/**
+ * @swagger
+ * /api/ai/adherence-coach:
+ *   post:
+ *     summary: AI Medication Adherence Coach
+ *     tags: [AI]
+ */
+router.post("/adherence-coach", protect, async (req, res, next) => {
+  try {
+    const profile = await HealthProfile.findOne({ user: req.user }).lean() || {};
+    const user = await User.findById(req.user).lean();
+    
+    // Get last 7 days of adherence data
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    const adherenceRecords = await Adherence.find({
+      userId: req.user,
+      createdAt: { $gte: weekAgo }
+    }).populate("medicationId", "name timeOfIntake frequency").lean();
+
+    const formattedHistory = adherenceRecords.map(r => ({
+      date: r.date,
+      medication: r.medicationId ? r.medicationId.name : 'Unknown',
+      status: r.status,
+      delayMinutes: r.delayMinutes
+    }));
+
+    const result = await aiService.generateAdherenceCoaching(profile, formattedHistory, user?.streakCount || 0);
+
+    res.json({
+      streakCount: user?.streakCount || 0,
+      longestStreak: user?.longestStreak || 0,
+      coach: result
+    });
   } catch (error) {
     next(error);
   }
