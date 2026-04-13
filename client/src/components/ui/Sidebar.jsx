@@ -3,13 +3,14 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Brain, User, HeartPulse, ChevronLeft, ChevronRight,
-  LogOut, Settings, Pill, Activity, X, Target
+  LogOut, Settings, Pill, Activity, X, Target, ScanFace
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 const navItems = [
   { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { path: '/health-insights', icon: Brain, label: 'AI Insights' },
+  { path: '/scanner', icon: ScanFace, label: 'Report Scanner' },
   { path: '/simulation', icon: Activity, label: 'Digital Twin' },
   { path: '/coach', icon: Target, label: 'Health Coach' },
   { path: '/profile', icon: User, label: 'Profile' },

@@ -91,6 +91,20 @@ const adherenceCoachSchema = z.object({
   nudge: z.string()
 });
 
+const reportScannerSchema = z.object({
+  extractedData: z.object({
+    medications: z.array(z.object({
+      name: z.string(),
+      dosage: z.string(),
+      frequency: z.string(),
+      timeOfIntake: z.string().optional(),
+      instructions: z.string()
+    })),
+    doctorNotes: z.string().optional()
+  }),
+  aiSummary: z.string()
+});
+
 // ─── Helpers ───
 
 const isMockMode = () => !process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY === "your_openai_api_key_here";
@@ -320,6 +334,24 @@ Act as a health coach. Spot any patterns in missed or delayed doses, and offer m
   return await callOpenAI(ADHERENCE_COACH_SYSTEM, prompt, adherenceCoachSchema);
 }
 
+// ─── 9. Medical Report Scanner (NEW) ───
+
+const REPORT_SCANNER_SYSTEM = `You are an expert AI medical document analyzer. Extract structural data from OCR text of medical reports/prescriptions.
+OUTPUT strictly valid JSON matching the exact schema requirements.
+Simplify the explanation for the "aiSummary" so a non-medical user can grasp it perfectly.`;
+
+async function extractReportData(rawText) {
+  if (isMockMode()) return getMockReportExtraction();
+
+  const prompt = `Here is the raw OCR text from a medical document:
+---
+${rawText}
+---
+Extract all medications, dosages, and instructions clearly. Summarize the report's intent in "aiSummary".`;
+  
+  return await callOpenAI(REPORT_SCANNER_SYSTEM, prompt, reportScannerSchema);
+}
+
 // ─── 6. Chat Response (enhanced) ───
 
 async function generateChatResponse(question, profile, medications) {
@@ -458,6 +490,31 @@ function getMockAdherenceCoaching(currentStreak) {
   };
 }
 
+function getMockReportExtraction() {
+  return {
+    extractedData: {
+      medications: [
+        {
+          name: "Amoxicillin",
+          dosage: "500mg",
+          frequency: "3 times a day",
+          timeOfIntake: "08:00 AM",
+          instructions: "Take with food for 7 days"
+        },
+        {
+          name: "Loratadine",
+          dosage: "10mg",
+          frequency: "daily",
+          timeOfIntake: "09:00 AM",
+          instructions: "Take for seasonal allergies"
+        }
+      ],
+      doctorNotes: "Patient presents with mild respiratory infection. Advised rest and hydration."
+    },
+    aiSummary: "The doctor prescribed Amoxicillin (an antibiotic) for an infection and Loratadine for your allergies. Remember to take the antibiotic with food and finish the entire 7-day course!"
+  };
+}
+
 module.exports = {
   generateFullAnalysis,
   generateChatResponse,
@@ -467,4 +524,5 @@ module.exports = {
   generateDailySummary,
   simulateHealth,
   generateAdherenceCoaching,
+  extractReportData,
 };

@@ -9,6 +9,7 @@ import Profile from './pages/Profile';
 import HealthInsights from './pages/HealthInsights';
 import HealthSimulationLab from './pages/HealthSimulationLab';
 import HealthCoach from './pages/HealthCoach';
+import ReportScanner from './pages/ReportScanner';
 import ChatAssistant from './components/ChatAssistant';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
@@ -129,6 +130,15 @@ function AppRoutes() {
                 <PrivateRoute>
                   <div className="px-4 lg:px-8 flex-1 flex flex-col pt-20 pb-10 max-w-[1400px]">
                     <HealthCoach />
+                  </div>
+                  <ChatAssistant />
+                  <VoiceAssistant />
+                </PrivateRoute>
+              } />
+              <Route path="/scanner" element={
+                <PrivateRoute>
+                  <div className="px-4 lg:px-8 flex-1 flex flex-col pt-20 pb-10 max-w-[1400px]">
+                    <ReportScanner />
                   </div>
                   <ChatAssistant />
                   <VoiceAssistant />

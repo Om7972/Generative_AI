@@ -9,8 +9,14 @@ const HealthProfile = require("../models/HealthProfile");
 const Simulation = require("../models/Simulation");
 const Adherence = require("../models/Adherence");
 const User = require("../models/User");
+const MedicalReport = require("../models/MedicalReport");
 const aiService = require("../services/aiService");
 const logger = require("../utils/logger");
+const multer = require("multer");
+const Tesseract = require("tesseract.js");
+const pdfParse = require("pdf-parse");
+
+const upload = multer({ storage: multer.memoryStorage() });
 
 const router = express.Router();
 
@@ -359,6 +365,51 @@ router.post("/adherence-coach", protect, async (req, res, next) => {
       longestStreak: user?.longestStreak || 0,
       coach: result
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ─── Medical Report Scanner (NEW) ───
+/**
+ * @swagger
+ * /api/ai/scan-report:
+ *   post:
+ *     summary: Scan a medical document and extract structured AI data
+ *     tags: [AI]
+ */
+router.post("/scan-report", protect, upload.single("report"), async (req, res, next) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "No document provided" });
+    }
+
+    let rawText = "";
+
+    // Step 1: Document Text Extraction
+    if (req.file.mimetype === "application/pdf") {
+      const pdfData = await pdfParse(req.file.buffer);
+      rawText = pdfData.text;
+    } else if (req.file.mimetype.startsWith("image/")) {
+      const { data: { text } } = await Tesseract.recognize(req.file.buffer, 'eng');
+      rawText = text;
+    } else {
+      return res.status(400).json({ message: "Unsupported file type. Use PDF or Images." });
+    }
+
+    // Step 2: AI Structural Parsing
+    const extractionResult = await aiService.extractReportData(rawText);
+
+    // Step 3: Save to DB
+    const report = await MedicalReport.create({
+      userId: req.user,
+      fileName: req.file.originalname,
+      rawText,
+      extractedData: extractionResult.extractedData,
+      aiSummary: extractionResult.aiSummary,
+    });
+
+    res.json(report);
   } catch (error) {
     next(error);
   }

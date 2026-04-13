@@ -19,3 +19,6 @@ export { default as EmergencyAlert } from './EmergencyAlert';
 export { default as MissedDoseRecovery } from './MissedDoseRecovery';
 export { default as SimulationGraph } from './SimulationGraph';
 export { default as ScenarioEditor } from './ScenarioEditor';
+export { default as ReportUploader } from './ReportUploader';
+export { default as ExtractedDataCard } from './ExtractedDataCard';
+export { default as SummaryView } from './SummaryView';
