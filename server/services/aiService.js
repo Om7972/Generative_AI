@@ -5,6 +5,10 @@ const logger = require("../utils/logger");
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || "dummy" });
 const gemini = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "dummy" });
+const groqClient = new OpenAI({ 
+  baseURL: "https://api.groq.com/openai/v1", 
+  apiKey: process.env.GROQ_API_KEY || "dummy" 
+});
 // ─── Zod Schemas ───
 
 const fullAnalysisSchema = z.object({
@@ -110,7 +114,8 @@ const reportScannerSchema = z.object({
 
 const isMockMode = () => 
   (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY === "your_openai_api_key_here") && 
-  (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === "your_gemini_api_key_here");
+  (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === "your_gemini_api_key_here") &&
+  (!process.env.GROQ_API_KEY || process.env.GROQ_API_KEY === "your_groq_api_key_here");
 
 async function callOpenAI(systemPrompt, userPrompt, schema, retries = 3) {
   if (isMockMode()) return null; // caller handles mock
@@ -136,23 +141,45 @@ async function callOpenAI(systemPrompt, userPrompt, schema, retries = 3) {
       return schema.parse(parsed);
     } catch (openaiError) {
       lastError = `OpenAI Error: ${openaiError.message}`;
-      logger.warn(`OpenAI call attempt ${attempt} failed: ${openaiError.message}. Falling back to Gemini...`);
+      logger.warn(`OpenAI call attempt ${attempt} failed: ${openaiError.message}. Falling back to Groq...`);
       
-      // 2. Try Gemini Fallback
+      // 2. Try Groq Fallback
       try {
-        const fullPrompt = `${systemPrompt}\n\n${userPrompt}`;
-        const geminiResponse = await gemini.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: fullPrompt,
-            config: { responseMimeType: "application/json" }
+        const groqResponse = await groqClient.chat.completions.create({
+          model: "llama-3.1-8b-instant",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt },
+          ],
+          temperature: 0.2,
+          max_tokens: 1500,
+          response_format: { type: "json_object" },
         });
-        const raw = geminiResponse.text;
+
+        const raw = groqResponse.choices[0].message.content;
         let cleaned = raw.replace(/\s*```json/gi, "").replace(/```\s*$/gi, "").trim();
         const parsed = JSON.parse(cleaned);
         return schema.parse(parsed);
-      } catch (geminiError) {
-         lastError = `Gemini Fallback Error: ${geminiError.message}`;
-         logger.warn(`Gemini fallback attempt ${attempt} failed: ${geminiError.message}`);
+      } catch (groqError) {
+        lastError = `Groq Fallback Error: ${groqError.message}`;
+        logger.warn(`Groq fallback attempt ${attempt} failed: ${groqError.message}. Falling back to Gemini...`);
+        
+        // 3. Try Gemini Fallback
+        try {
+          const fullPrompt = `${systemPrompt}\n\n${userPrompt}`;
+          const geminiResponse = await gemini.models.generateContent({
+              model: 'gemini-2.5-flash',
+              contents: fullPrompt,
+              config: { responseMimeType: "application/json" }
+          });
+          const raw = geminiResponse.text;
+          let cleaned = raw.replace(/\s*```json/gi, "").replace(/```\s*$/gi, "").trim();
+          const parsed = JSON.parse(cleaned);
+          return schema.parse(parsed);
+        } catch (geminiError) {
+           lastError = `Gemini Fallback Error: ${geminiError.message}`;
+           logger.warn(`Gemini fallback attempt ${attempt} failed: ${geminiError.message}`);
+        }
       }
     }
     
@@ -443,17 +470,33 @@ Question: "${question}"`;
     return { answer: response.choices[0].message.content };
   } catch (error) {
     lastError = error.message;
-    logger.warn(`Chat completion OpenAI failed: ${lastError}. Falling back to Gemini...`);
+    logger.warn(`Chat completion OpenAI failed: ${lastError}. Falling back to Groq...`);
+    
     try {
-      const fullPrompt = `${systemPrompt}\n\n${userPrompt}`;
-      const geminiResponse = await gemini.models.generateContent({
-         model: 'gemini-2.5-flash',
-         contents: fullPrompt,
+      const groqResponse = await groqClient.chat.completions.create({
+        model: "llama-3.1-8b-instant",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        temperature: 0.4,
       });
-      return { answer: geminiResponse.text };
-    } catch (geminiError) {
-      logger.error(`Chat completion Gemini failed: ${geminiError.message}`);
-      return { answer: "I'm currently unable to process your request due to service limitations. Please try again later." };
+      return { answer: groqResponse.choices[0].message.content };
+    } catch (groqError) {
+      lastError = groqError.message;
+      logger.warn(`Chat completion Groq failed: ${lastError}. Falling back to Gemini...`);
+      
+      try {
+        const fullPrompt = `${systemPrompt}\n\n${userPrompt}`;
+        const geminiResponse = await gemini.models.generateContent({
+           model: 'gemini-2.5-flash',
+           contents: fullPrompt,
+        });
+        return { answer: geminiResponse.text };
+      } catch (geminiError) {
+        logger.error(`Chat completion Gemini failed: ${geminiError.message}`);
+        return { answer: "I'm currently unable to process your request due to service limitations. Please try again later." };
+      }
     }
   }
 }
