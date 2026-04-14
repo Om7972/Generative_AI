@@ -1,9 +1,10 @@
 const { OpenAI } = require("openai");
+const { GoogleGenAI } = require("@google/genai");
 const { z } = require("zod");
 const logger = require("../utils/logger");
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || "dummy" });
+const gemini = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "dummy" });
 // ─── Zod Schemas ───
 
 const fullAnalysisSchema = z.object({
@@ -107,13 +108,17 @@ const reportScannerSchema = z.object({
 
 // ─── Helpers ───
 
-const isMockMode = () => true; // Forced true until quota is resolved
+const isMockMode = () => 
+  (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY === "your_openai_api_key_here") && 
+  (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === "your_gemini_api_key_here");
 
 async function callOpenAI(systemPrompt, userPrompt, schema, retries = 3) {
   if (isMockMode()) return null; // caller handles mock
 
+  let lastError;
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
+      // 1. Try OpenAI
       const response = await openai.chat.completions.create({
         model: "gpt-3.5-turbo",
         messages: [
@@ -129,9 +134,30 @@ async function callOpenAI(systemPrompt, userPrompt, schema, retries = 3) {
       let cleaned = raw.replace(/\s*```json/gi, "").replace(/```\s*$/gi, "").trim();
       const parsed = JSON.parse(cleaned);
       return schema.parse(parsed);
-    } catch (error) {
-      logger.warn(`AI call attempt ${attempt} failed: ${error.message}`);
-      if (attempt === retries) throw new Error("AI analysis failed after multiple attempts.");
+    } catch (openaiError) {
+      lastError = `OpenAI Error: ${openaiError.message}`;
+      logger.warn(`OpenAI call attempt ${attempt} failed: ${openaiError.message}. Falling back to Gemini...`);
+      
+      // 2. Try Gemini Fallback
+      try {
+        const fullPrompt = `${systemPrompt}\n\n${userPrompt}`;
+        const geminiResponse = await gemini.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: fullPrompt,
+            config: { responseMimeType: "application/json" }
+        });
+        const raw = geminiResponse.text;
+        let cleaned = raw.replace(/\s*```json/gi, "").replace(/```\s*$/gi, "").trim();
+        const parsed = JSON.parse(cleaned);
+        return schema.parse(parsed);
+      } catch (geminiError) {
+         lastError = `Gemini Fallback Error: ${geminiError.message}`;
+         logger.warn(`Gemini fallback attempt ${attempt} failed: ${geminiError.message}`);
+      }
+    }
+    
+    if (attempt === retries) {
+      throw new Error(`AI analysis failed after multiple attempts.\nLast error: ${lastError}`);
     }
   }
 }
@@ -169,17 +195,22 @@ async function generateFullAnalysis(profile, medications, retries = 3) {
   if (isMockMode()) return getMockFullAnalysis(medications);
 
   const prompt = buildFullAnalysisPrompt(profile, medications);
-  const data = await callOpenAI(FULL_ANALYSIS_SYSTEM, prompt, fullAnalysisSchema, retries);
+  try {
+    const data = await callOpenAI(FULL_ANALYSIS_SYSTEM, prompt, fullAnalysisSchema, retries);
 
-  let riskScore = "low";
-  let numericScore = 15;
-  if (data.interactions.some(i => i.severity === "high") || data.warnings.length >= 3) {
-    riskScore = "high"; numericScore = 78;
-  } else if (data.interactions.some(i => i.severity === "medium")) {
-    riskScore = "medium"; numericScore = 45;
+    let riskScore = "low";
+    let numericScore = 15;
+    if (data.interactions.some(i => i.severity === "high") || data.warnings.length >= 3) {
+      riskScore = "high"; numericScore = 78;
+    } else if (data.interactions.some(i => i.severity === "medium")) {
+      riskScore = "medium"; numericScore = 45;
+    }
+
+    return { data, riskScore, numericRiskScore: numericScore };
+  } catch (err) {
+    logger.warn(`generateFullAnalysis fallback to mock: ${err.message}`);
+    return getMockFullAnalysis(medications);
   }
-
-  return { data, riskScore, numericRiskScore: numericScore };
 }
 
 // ─── 2. AI Health Risk Score (NEW) ───
@@ -210,7 +241,12 @@ Medications: ${medications.map(m => m.name).join(", ")}
 Missed doses in last 7 days: ${missedDoses}
 Calculate comprehensive risk score considering drug interactions, pre-existing conditions impact, and medication adherence.`;
 
-  return await callOpenAI(RISK_SCORE_SYSTEM, prompt, riskScoreSchema);
+  try {
+    return await callOpenAI(RISK_SCORE_SYSTEM, prompt, riskScoreSchema);
+  } catch (err) {
+    logger.warn(`calculateRiskScore fallback to mock: ${err.message}`);
+    return getMockRiskScore(medications, missedDoses);
+  }
 }
 
 // ─── 3. Smart Missed Dose Recovery (NEW) ───
@@ -234,7 +270,12 @@ Frequency: ${medication.frequency}
 Patient age: ${profile.age || "?"}, Conditions: ${(profile.conditions || []).join(", ") || "None"}
 Advise on missed dose recovery.`;
 
-  return await callOpenAI(MISSED_DOSE_SYSTEM, prompt, missedDoseSchema);
+  try {
+    return await callOpenAI(MISSED_DOSE_SYSTEM, prompt, missedDoseSchema);
+  } catch (err) {
+    logger.warn(`getMissedDoseAdvice fallback to mock: ${err.message}`);
+    return getMockMissedDose(medication, hoursLate);
+  }
 }
 
 // ─── 4. Medication Combination Optimizer (NEW) ───
@@ -256,7 +297,12 @@ Medications:
 ${medications.map(m => `- ${m.name} (${m.dosage}, ${m.frequency}, current time: ${m.timeOfIntake})`).join("\n")}
 Optimize the schedule to minimize daily intake windows while avoiding conflicts.`;
 
-  return await callOpenAI(OPTIMIZER_SYSTEM, prompt, combinationOptimizerSchema);
+  try {
+    return await callOpenAI(OPTIMIZER_SYSTEM, prompt, combinationOptimizerSchema);
+  } catch (err) {
+    logger.warn(`optimizeMedicationSchedule fallback to mock: ${err.message}`);
+    return getMockOptimizedSchedule(medications);
+  }
 }
 
 // ─── 5. AI Daily Health Summary (NEW) ───
@@ -282,7 +328,12 @@ Today's medications: ${medications.map(m => `${m.name} (${m.dosage}, ${m.timeOfI
 Recent missed doses: ${missedDoses}
 Generate today's health summary, schedule, and any alerts.`;
 
-  return await callOpenAI(DAILY_SUMMARY_SYSTEM, prompt, dailySummarySchema);
+  try {
+    return await callOpenAI(DAILY_SUMMARY_SYSTEM, prompt, dailySummarySchema);
+  } catch (err) {
+    logger.warn(`generateDailySummary fallback to mock: ${err.message}`);
+    return getMockDailySummary(medications, missedDoses);
+  }
 }
 
 // ─── 7. Digital Twin Health Simulation (NEW) ───
@@ -309,7 +360,12 @@ async function simulateHealth(profile, medications) {
 Medications: ${medications.map(m => `${m.name} (${m.dosage}, taken at ${m.timeOfIntake})`).join(" | ")}
 Simulate the 24-hour cycle. Map out energy peaks/crashes, risks, and side effect timelines based on when medications are taken.`;
 
-  return await callOpenAI(SIMULATION_SYSTEM, prompt, healthSimulationSchema);
+  try {
+    return await callOpenAI(SIMULATION_SYSTEM, prompt, healthSimulationSchema);
+  } catch (err) {
+    logger.warn(`simulateHealth fallback to mock: ${err.message}`);
+    return getMockSimulation(medications);
+  }
 }
 
 // ─── 8. Adherence Coach (NEW) ───
@@ -331,7 +387,12 @@ Current Streak: ${currentStreak} days.
 Recent Adherence Records (last 7 days): ${JSON.stringify(adherenceHistory)}
 Act as a health coach. Spot any patterns in missed or delayed doses, and offer motivational advice.`;
   
-  return await callOpenAI(ADHERENCE_COACH_SYSTEM, prompt, adherenceCoachSchema);
+  try {
+    return await callOpenAI(ADHERENCE_COACH_SYSTEM, prompt, adherenceCoachSchema);
+  } catch (err) {
+    logger.warn(`generateAdherenceCoaching fallback to mock: ${err.message}`);
+    return getMockAdherenceCoaching(currentStreak);
+  }
 }
 
 // ─── 9. Medical Report Scanner (NEW) ───
@@ -349,7 +410,12 @@ ${rawText}
 ---
 Extract all medications, dosages, and instructions clearly. Summarize the report's intent in "aiSummary".`;
   
-  return await callOpenAI(REPORT_SCANNER_SYSTEM, prompt, reportScannerSchema);
+  try {
+    return await callOpenAI(REPORT_SCANNER_SYSTEM, prompt, reportScannerSchema);
+  } catch (err) {
+    logger.warn(`extractReportData fallback to mock: ${err.message}`);
+    return getMockReportExtraction();
+  }
 }
 
 // ─── 6. Chat Response (enhanced) ───
@@ -364,16 +430,32 @@ async function generateChatResponse(question, profile, medications) {
 Medications: ${medications.map(m => m.name).join(", ") || "None"}
 Question: "${question}"`;
 
-  const response = await openai.chat.completions.create({
-    model: "gpt-3.5-turbo",
-    messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: userPrompt },
-    ],
-    temperature: 0.4,
-  });
-
-  return { answer: response.choices[0].message.content };
+  let lastError;
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      temperature: 0.4,
+    });
+    return { answer: response.choices[0].message.content };
+  } catch (error) {
+    lastError = error.message;
+    logger.warn(`Chat completion OpenAI failed: ${lastError}. Falling back to Gemini...`);
+    try {
+      const fullPrompt = `${systemPrompt}\n\n${userPrompt}`;
+      const geminiResponse = await gemini.models.generateContent({
+         model: 'gemini-2.5-flash',
+         contents: fullPrompt,
+      });
+      return { answer: geminiResponse.text };
+    } catch (geminiError) {
+      logger.error(`Chat completion Gemini failed: ${geminiError.message}`);
+      return { answer: "I'm currently unable to process your request due to service limitations. Please try again later." };
+    }
+  }
 }
 
 // ─── Mock Responses (when no API key) ───
