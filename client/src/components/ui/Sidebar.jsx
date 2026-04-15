@@ -12,7 +12,7 @@ const navItems = [
   { path: '/health-insights', icon: Brain, label: 'AI Insights' },
   { path: '/scanner', icon: ScanFace, label: 'Report Scanner' },
   { path: '/simulation', icon: Activity, label: 'Digital Twin' },
-  { path: '/coach', icon: Target, label: 'Health Coach' },
+  { path: '/coach', icon: Target, label: 'AI Coach' },
   { path: '/profile', icon: User, label: 'Profile' },
 ];
 

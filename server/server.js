@@ -17,6 +17,7 @@ const medicationRoutes = require("./routes/medications");
 const aiRoutes = require("./routes/ai");
 const reminderRoutes = require("./routes/reminders");
 const profileRoutes = require("./routes/profile");
+const aiCoachRoutes = require("./routes/aiCoachRoutes");
 
 const app = express();
 
@@ -74,6 +75,7 @@ app.use("/api/medications", medicationRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/reminders", reminderRoutes);
 app.use("/api/profile", profileRoutes);
+app.use("/api/ai/coach", aiCoachRoutes);
 
 // Health check
 app.get("/api/health", (req, res) => {

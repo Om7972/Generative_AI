@@ -1,0 +1,209 @@
+const { OpenAI } = require("openai");
+const { z } = require("zod");
+const logger = require("../utils/logger");
+const CoachConversation = require("../models/CoachConversation");
+const Medication = require("../models/Medication");
+const HealthProfile = require("../models/HealthProfile");
+const Adherence = require("../models/Adherence");
+const User = require("../models/User");
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || "dummy" });
+const groqClient = new OpenAI({ 
+  baseURL: "https://api.groq.com/openai/v1", 
+  apiKey: process.env.GROQ_API_KEY || "dummy" 
+});
+
+const coachResponseSchema = z.object({
+  message: z.string(),
+  tips: z.array(z.string()),
+  warnings: z.array(z.string()),
+  motivation: z.string(),
+});
+
+const isMockMode = () => 
+  (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY === "your_openai_api_key_here") && 
+  (!process.env.GROQ_API_KEY || process.env.GROQ_API_KEY === "your_groq_api_key_here");
+
+async function callChatAI(systemPrompt, userPrompt, schema) {
+  if (isMockMode()) return null;
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      temperature: 0.7,
+      response_format: { type: "json_object" },
+    });
+
+    const parsed = JSON.parse(response.choices[0].message.content);
+    return schema.parse(parsed);
+  } catch (error) {
+    logger.warn(`AI Coach OpenAI failed: ${error.message}. Trying Groq...`);
+    try {
+      const groqResponse = await groqClient.chat.completions.create({
+        model: "llama-3.1-8b-instant",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        temperature: 0.7,
+        response_format: { type: "json_object" },
+      });
+      const parsed = JSON.parse(groqResponse.choices[0].message.content);
+      return schema.parse(parsed);
+    } catch (groqError) {
+      logger.error(`AI Coach Groq failed: ${groqError.message}`);
+      throw groqError;
+    }
+  }
+}
+
+async function getCoachChatResponse(userId, userMessage, mood = 'neutral') {
+  const profile = await HealthProfile.findOne({ userId });
+  const medications = await Medication.find({ userId });
+  const adherence = await Adherence.find({ userId }).sort({ date: -1 }).limit(10);
+  const currentTime = new Date().toLocaleTimeString();
+  const totalMissed = medications.reduce((sum, m) => sum + (m.missedCount || 0), 0);
+
+  const systemPrompt = `You are a friendly, supportive AI Health Coach.
+  
+  Current Context:
+  - Local Time: ${currentTime}
+  - User Mood: ${mood}
+  - Profile: ${JSON.stringify(profile)}
+  - Active Medications: ${medications.length}
+  - Adherence Data: ${JSON.stringify(adherence)}
+  - Total Missed Doses (Lifetime): ${totalMissed}
+  
+  Meds Detail: ${JSON.stringify(medications.map(m => ({ name: m.name, time: m.timeOfIntake, missed: m.missedCount })))}
+
+  Tasks:
+  1. Give personalized advice based on the user's message and their health context.
+  2. Motivate user to follow their medication schedule.
+  3. Explain any health risks simply.
+  4. Suggest improvements in daily habits.
+  5. Adjust your tone based on the user's mood:
+     - supportive if stressed
+     - motivating if tired/lazy
+     - informative if neutral
+     - cheerful if happy
+
+  Rules:
+  - Never give strict medical prescriptions.
+  - Always include a safe disclaimer if medical advice is sought.
+  - Keep tone human, caring, and concise.
+
+  Output strictly valid JSON:
+  {
+    "message": "your main response text",
+    "tips": ["tip1", "tip2"],
+    "warnings": ["warning1"],
+    "motivation": "one-line motivational quote or encouragement"
+  }`;
+
+  if (isMockMode()) {
+    return {
+      message: `[MOCK] Hey there! As your Health Coach, I'm here to support you. Since you're feeling ${mood}, I want to remind you that staying consistent with your ${medications.length} medications is key to feeling your best.`,
+      tips: ["Stay hydrated", "Take a short walk"],
+      warnings: ["Don't skip your evening dose"],
+      motivation: "Small steps lead to big changes!"
+    };
+  }
+
+  return await callChatAI(systemPrompt, userMessage, coachResponseSchema);
+}
+
+async function generateDailyBriefing(userId) {
+  const profile = await HealthProfile.findOne({ userId });
+  const medications = await Medication.find({ userId });
+  const adherence = await Adherence.find({ userId }).sort({ date: -1 }).limit(5);
+  const totalMissed = medications.reduce((sum, m) => sum + (m.missedCount || 0), 0);
+  const currentTime = new Date().toLocaleTimeString();
+
+  const systemPrompt = `You are an AI Health Coach. Generate a "Your Health Today" briefing.
+  
+  Context:
+  - Local Time: ${currentTime}
+  - Profile: ${JSON.stringify(profile)}
+  - Active Meds: ${medications.length}
+  - Recent Adherence: ${JSON.stringify(adherence)}
+  - Missed Doses: ${totalMissed}
+
+  Output strictly valid JSON:
+  {
+    "title": "Your Health Today",
+    "summary": "2-3 sentences overview",
+    "schedule_highlights": ["Med A at 8am", "Med B at 9pm"],
+    "risks": ["Possible interaction risk"],
+    "tips": ["Lifestyle tip for today"]
+  }`;
+
+  if (isMockMode()) {
+    return {
+      title: "Your Health Today",
+      summary: "You have a busy day ahead. Staying on top of your meds will keep your energy levels stable.",
+      schedule_highlights: medications.map(m => `${m.name} at ${m.timeOfIntake || 'scheduled time'}`),
+      risks: ["Minor fatigue possible if doses are missed"],
+      tips: ["Drink 2L of water today"]
+    };
+  }
+
+  const briefSchema = z.object({
+    title: z.string(),
+    summary: z.string(),
+    schedule_highlights: z.array(z.string()),
+    risks: z.array(z.string()),
+    tips: z.array(z.string()),
+  });
+
+  return await callChatAI(systemPrompt, "Generate my daily health briefing.", briefSchema);
+}
+
+async function analyzeHabits(userId) {
+  const adherence = await Adherence.find({ userId }).sort({ date: -1 }).limit(30);
+  const user = await User.findById(userId);
+
+  const systemPrompt = `You are an AI Health Coach. Analyze the user's past 30 days of adherence and identify patterns.
+  
+  Adherence Data: ${JSON.stringify(adherence)}
+  Current Streak: ${user?.streakCount || 0} days
+  Longest Streak: ${user?.longestStreak || 0} days
+
+  Output strictly valid JSON:
+  {
+    "insights": ["e.g., You often miss evening meds"],
+    "improvement_plan": "A plan to help them improve",
+    "streak_info": "Encouragement about their consistency",
+    "streakCount": ${user?.streakCount || 0},
+    "longestStreak": ${user?.longestStreak || 0}
+  }`;
+
+  if (isMockMode()) {
+    return {
+      insights: ["You're very consistent with morning doses!", "Evening doses are sometimes 1-2 hours late."],
+      improvement_plan: "Try setting an alarm for 8 PM to ensure you don't miss your evening medication.",
+      streak_info: `You're doing great with a ${user?.streakCount || 0}-day streak! Keep it up.`,
+      streakCount: user?.streakCount || 0,
+      longestStreak: user?.longestStreak || 0
+    };
+  }
+
+  const habitSchema = z.object({
+    insights: z.array(z.string()),
+    improvement_plan: z.string(),
+    streak_info: z.string(),
+    streakCount: z.number(),
+    longestStreak: z.number(),
+  });
+
+  return await callChatAI(systemPrompt, "Analyze my health habits.", habitSchema);
+}
+
+module.exports = {
+  getCoachChatResponse,
+  generateDailyBriefing,
+  analyzeHabits
+};
