@@ -62,8 +62,8 @@ async function callChatAI(systemPrompt, userPrompt, schema) {
 }
 
 async function getCoachChatResponse(userId, userMessage, mood = 'neutral') {
-  const profile = await HealthProfile.findOne({ userId });
-  const medications = await Medication.find({ userId });
+  const profile = await HealthProfile.findOne({ user: userId });
+  const medications = await Medication.find({ user: userId });
   const adherence = await Adherence.find({ userId }).sort({ date: -1 }).limit(10);
   const currentTime = new Date().toLocaleTimeString();
   const totalMissed = medications.reduce((sum, m) => sum + (m.missedCount || 0), 0);
@@ -117,8 +117,8 @@ async function getCoachChatResponse(userId, userMessage, mood = 'neutral') {
 }
 
 async function generateDailyBriefing(userId) {
-  const profile = await HealthProfile.findOne({ userId });
-  const medications = await Medication.find({ userId });
+  const profile = await HealthProfile.findOne({ user: userId });
+  const medications = await Medication.find({ user: userId });
   const adherence = await Adherence.find({ userId }).sort({ date: -1 }).limit(5);
   const totalMissed = medications.reduce((sum, m) => sum + (m.missedCount || 0), 0);
   const currentTime = new Date().toLocaleTimeString();
@@ -213,8 +213,8 @@ async function analyzeHabits(userId) {
     "insights": ["e.g., You often miss evening meds"],
     "improvement_plan": "A plan to help them improve",
     "streak_info": "Encouragement about their consistency",
-    "streakCount": ${user?.streakCount || 0},
-    "longestStreak": ${user?.longestStreak || 0}
+    "streakCount": ${Number(user?.streakCount || 0)},
+    "longestStreak": ${Number(user?.longestStreak || 0)}
   }`;
 
   if (isMockMode()) {

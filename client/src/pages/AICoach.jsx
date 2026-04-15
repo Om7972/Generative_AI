@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Send, User, Bot, Sparkles, Calendar, TrendingUp, RefreshCw, 
-  MessageCircle, LayoutDashboard, History, CheckCircle2, AlertCircle
+  MessageCircle, LayoutDashboard, History, CheckCircle2, AlertCircle, Bell
 } from 'lucide-react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
@@ -64,9 +64,12 @@ const AICoach = () => {
     if (regenerate) setIsGeneratingBrief(true);
     try {
       const method = regenerate ? 'post' : 'get';
-      const response = await axios[method]('http://localhost:5000/api/ai/coach/daily-brief', {}, {
-        headers: { Authorization: `Bearer ${user?.token}` }
-      });
+      const config = { headers: { Authorization: `Bearer ${user?.token}` } };
+      
+      // Use helper to handle different axios method signatures
+      const response = method === 'get'
+        ? await axios.get('http://localhost:5000/api/ai/coach/daily-brief', config)
+        : await axios.post('http://localhost:5000/api/ai/coach/daily-brief', {}, config);
       setDailyBrief(response.data);
       if (regenerate) toast.success('Daily brief updated!');
     } catch (err) {
@@ -81,9 +84,14 @@ const AICoach = () => {
     if (regenerate) setIsAnalyzingHabits(true);
     try {
       const method = regenerate ? 'post' : 'get';
-      const response = await axios[method]('http://localhost:5000/api/ai/coach/analyze-habits', {}, {
-        headers: { Authorization: `Bearer ${user?.token}` }
-      });
+      const config = { headers: { Authorization: `Bearer ${user?.token}` } };
+      const body = {
+        streakCount: Number(user?.streakCount || 0),
+        longestStreak: Number(user?.longestStreak || 0)
+      };
+      const response = method === 'get'
+        ? await axios.get('http://localhost:5000/api/ai/coach/analyze-habits', config)
+        : await axios.post('http://localhost:5000/api/ai/coach/analyze-habits', body, config);
       setHabitsAnalysis(response.data);
       if (regenerate) toast.success('Health habits analyzed!');
     } catch (err) {
