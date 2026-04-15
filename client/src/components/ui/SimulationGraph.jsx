@@ -46,7 +46,7 @@ const SimulationGraph = ({ data = [] }) => {
 
   return (
     <div className="h-[400px] w-full mt-6 relative">
-      <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+      <ResponsiveContainer width="99%" height={380}>
         <AreaChart
           data={data}
           margin={{ top: 20, right: 30, left: 0, bottom: 20 }}

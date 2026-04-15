@@ -32,15 +32,15 @@ const Navbar = ({ onMobileMenuToggle }) => {
     <>
       <nav
         id="main-navbar"
-        className={`fixed top-0 right-0 z-50 h-16 flex items-center transition-all duration-300 ${
+        className={`fixed top-0 right-0 z-50 h-16 flex items-center transition-all duration-500 ease-in-out ${
           showFullNav ? 'left-0 lg:left-[240px]' : 'left-0'
         } ${
           scrolled || !isLanding
-            ? 'bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200/50 dark:border-slate-800/50 shadow-sm'
+            ? 'bg-white/70 dark:bg-slate-900/70 backdrop-blur-2xl border-b border-slate-200/40 dark:border-slate-800/40 shadow-sm'
             : 'bg-transparent'
         }`}
       >
-        <div className={`w-full px-4 ${showFullNav ? 'lg:px-8' : 'container mx-auto max-w-6xl'} flex justify-between items-center h-full`}>
+        <div className={`w-full px-6 lg:px-10 ${showFullNav ? '' : 'container mx-auto max-w-7xl'} flex justify-between items-center h-full`}>
           {/* Left side: Logo or hamburger */}
           <div className="flex items-center gap-3">
             {showFullNav && (
@@ -97,12 +97,12 @@ const Navbar = ({ onMobileMenuToggle }) => {
               <>
                 {/* Notification bell */}
                 <button
-                  className="p-2.5 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 relative"
+                  className="p-2.5 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all duration-300 rounded-xl hover:bg-slate-100/80 dark:hover:bg-slate-800/80 relative group"
                   aria-label="Notifications"
                   id="notification-bell"
                 >
-                  <Bell size={18} />
-                  <span className="absolute top-2 right-2 w-2 h-2 bg-accent-400 rounded-full border border-white dark:border-slate-900" />
+                  <Bell size={18} className="group-hover:rotate-12 transition-transform" />
+                  <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-accent-500 rounded-full border-2 border-white dark:border-slate-900 animate-pulse" />
                 </button>
 
                 {/* Mobile nav items for non-sidebar pages */}

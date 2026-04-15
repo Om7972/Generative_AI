@@ -5,24 +5,46 @@ import { ShieldAlert, Phone, X, AlertTriangle, HeartPulse } from 'lucide-react';
 const EmergencyAlert = ({ alert, onDismiss }) => {
   const [visible, setVisible] = useState(false);
 
+  const [audioUnlocked, setAudioUnlocked] = useState(false);
+
   useEffect(() => {
-    if (alert) {
+    const unlock = () => {
+      setAudioUnlocked(true);
+      window.removeEventListener('click', unlock);
+      window.removeEventListener('touchstart', unlock);
+    };
+    window.addEventListener('click', unlock);
+    window.addEventListener('touchstart', unlock);
+    return () => {
+      window.removeEventListener('click', unlock);
+      window.removeEventListener('touchstart', unlock);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (alert && audioUnlocked) {
       setVisible(true);
-      // Play alert sound
       try {
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        const ctx = new AudioContext();
+        if (ctx.state === 'suspended') ctx.resume();
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.connect(gain);
         gain.connect(ctx.destination);
         osc.type = 'sine';
-        osc.frequency.value = 880;
-        gain.gain.value = 0.15;
+        osc.frequency.setValueAtTime(880, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.5);
+        gain.gain.setValueAtTime(0.15, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
         osc.start();
-        setTimeout(() => { osc.stop(); ctx.close(); }, 500);
+        osc.stop(ctx.currentTime + 0.5);
+        setTimeout(() => ctx.close(), 600);
       } catch (e) {}
+    } else if (alert) {
+      setVisible(true);
     }
-  }, [alert]);
+  }, [alert, audioUnlocked]);
 
   if (!alert || !visible) return null;
 
