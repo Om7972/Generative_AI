@@ -159,7 +159,43 @@ async function generateDailyBriefing(userId) {
     tips: z.array(z.string()),
   });
 
-  return await callChatAI(systemPrompt, "Generate my daily health briefing.", briefSchema);
+  const parsed = await callChatAI(systemPrompt, "Generate my daily health briefing.", briefSchema);
+
+  // Save to DailySummary for persistence
+  try {
+    const DailySummary = require('../models/DailySummary');
+    const today = new Date().toISOString().split("T")[0];
+    
+    await DailySummary.findOneAndUpdate(
+      { userId, date: today },
+      {
+        summary: {
+          totalMedications: medications.length,
+          medicationNames: medications.map(m => m.name),
+          aiNarrative: parsed.summary,
+          optimizedSchedule: parsed.schedule_highlights.map(s => {
+            const parts = s.split(':');
+            return {
+              timeSlot: parts[0] || "Scheduled",
+              medications: [parts[1] || s],
+              instructions: "Follow strictly"
+            };
+          }),
+          tips: parsed.tips
+        },
+        alerts: parsed.risks.map(r => ({
+          type: "info",
+          severity: "low",
+          message: r
+        }))
+      },
+      { upsert: true, new: true }
+    );
+  } catch (err) {
+    logger.error('Failed to save DailySummary from Coach Service:', err);
+  }
+
+  return parsed;
 }
 
 async function analyzeHabits(userId) {

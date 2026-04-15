@@ -22,15 +22,20 @@ const AICoach = () => {
   const [pageLoading, setPageLoading] = useState(true);
   const [dailyBrief, setDailyBrief] = useState(null);
   const [habitsAnalysis, setHabitsAnalysis] = useState(null);
-  const [activeTab, setActiveTab] = useState('chat'); // 'chat', 'brief', 'insights'
+  const [activeTab, setActiveTab] = useState('chat');
+
+  const [isGeneratingBrief, setIsGeneratingBrief] = useState(false);
+  const [isAnalyzingHabits, setIsAnalyzingHabits] = useState(false);
 
   const chatEndRef = useRef(null);
 
   useEffect(() => {
-    fetchHistory();
-    fetchDailyBrief();
-    fetchHabits();
-  }, []);
+    if (user && user?.token) {
+      fetchHistory();
+      fetchDailyBrief();
+      fetchHabits();
+    }
+  }, [user]);
 
   useEffect(() => {
     scrollToBottom();
@@ -43,7 +48,7 @@ const AICoach = () => {
   const fetchHistory = async () => {
     try {
       const response = await axios.get('http://localhost:5000/api/ai/coach/history', {
-        headers: { Authorization: `Bearer ${user.token}` }
+        headers: { Authorization: `Bearer ${user?.token}` }
       });
       if (response.data && response.data.messages) {
         setMessages(response.data.messages);
@@ -55,25 +60,37 @@ const AICoach = () => {
     }
   };
 
-  const fetchDailyBrief = async () => {
+  const fetchDailyBrief = async (regenerate = false) => {
+    if (regenerate) setIsGeneratingBrief(true);
     try {
-      const response = await axios.get('http://localhost:5000/api/ai/coach/daily-brief', {
-        headers: { Authorization: `Bearer ${user.token}` }
+      const method = regenerate ? 'post' : 'get';
+      const response = await axios[method]('http://localhost:5000/api/ai/coach/daily-brief', {}, {
+        headers: { Authorization: `Bearer ${user?.token}` }
       });
       setDailyBrief(response.data);
+      if (regenerate) toast.success('Daily brief updated!');
     } catch (err) {
-      console.error('Daily brief fetch error:', err);
+      console.error('Daily brief error:', err);
+      if (regenerate) toast.error('Failed to update daily brief.');
+    } finally {
+      setIsGeneratingBrief(false);
     }
   };
 
-  const fetchHabits = async () => {
+  const fetchHabits = async (regenerate = false) => {
+    if (regenerate) setIsAnalyzingHabits(true);
     try {
-      const response = await axios.get('http://localhost:5000/api/ai/coach/analyze-habits', {
-        headers: { Authorization: `Bearer ${user.token}` }
+      const method = regenerate ? 'post' : 'get';
+      const response = await axios[method]('http://localhost:5000/api/ai/coach/analyze-habits', {}, {
+        headers: { Authorization: `Bearer ${user?.token}` }
       });
       setHabitsAnalysis(response.data);
+      if (regenerate) toast.success('Health habits analyzed!');
     } catch (err) {
-      console.error('Habits fetch error:', err);
+      console.error('Habits error:', err);
+      if (regenerate) toast.error('Failed to analyze habits.');
+    } finally {
+      setIsAnalyzingHabits(false);
     }
   };
 
@@ -89,14 +106,11 @@ const AICoach = () => {
     try {
       const response = await axios.post('http://localhost:5000/api/ai/coach/chat', 
         { message: input, mood },
-        { headers: { Authorization: `Bearer ${user.token}` } }
+        { headers: { Authorization: `Bearer ${user?.token}` } }
       );
 
       const aiMsg = { role: 'ai', text: response.data.message, timestamp: new Date() };
       setMessages((prev) => [...prev, aiMsg]);
-      
-      // If the AI gives tips/warnings in the chat response, we could display them separately
-      // but for now, we'll just include the message.
     } catch (err) {
       toast.error('Coach is currently unavailable.');
     } finally {
@@ -257,47 +271,74 @@ const AICoach = () => {
 
           {activeTab === 'brief' && (
             <div className="space-y-6">
-              <CoachCard title="Your Health Today" icon={Calendar}>
-                {dailyBrief ? (
+              <CoachCard 
+                title="Your Health Today" 
+                icon={Calendar} 
+                extra={dailyBrief && (
+                  <button 
+                    onClick={() => fetchDailyBrief(true)} 
+                    disabled={isGeneratingBrief}
+                    className="p-2 text-slate-400 hover:text-white transition-all disabled:opacity-50"
+                  >
+                    <RefreshCw size={18} className={isGeneratingBrief ? 'animate-spin text-blue-500' : ''} />
+                  </button>
+                )}
+              >
+                {isGeneratingBrief ? (
+                  <div className="py-20 flex flex-col items-center">
+                    <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4" />
+                    <p className="text-slate-400 font-medium">Generating your daily protocol...</p>
+                  </div>
+                ) : dailyBrief ? (
                   <>
-                    <p className="text-slate-300 leading-relaxed text-lg">{dailyBrief.summary}</p>
+                    <p className="text-slate-200 leading-relaxed text-lg font-medium">{dailyBrief.summary}</p>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-                      <div className="p-4 bg-slate-800/50 rounded-2xl border border-slate-700">
-                        <h4 className="text-sm font-bold text-blue-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
+                      <div className="p-5 bg-blue-600/5 rounded-3xl border border-blue-600/10 hover:bg-blue-600/10 transition-colors group">
+                        <h4 className="text-xs font-black text-blue-500 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
                           <Sparkles size={14} /> Schedule Highlights
                         </h4>
-                        <ul className="space-y-2">
+                        <ul className="space-y-3">
                           {dailyBrief.schedule_highlights.map((item, i) => (
-                            <li key={i} className="flex items-center gap-2 text-slate-300 text-sm font-medium">
-                              <CheckCircle2 size={14} className="text-blue-500" /> {item}
+                            <li key={i} className="flex items-start gap-3 text-slate-300 text-sm font-semibold group-hover:text-white transition-colors">
+                              <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-1.5 flex-shrink-0" />
+                              {item}
                             </li>
                           ))}
                         </ul>
                       </div>
                       
-                      <div className="p-4 bg-slate-800/50 rounded-2xl border border-slate-700">
-                        <h4 className="text-sm font-bold text-red-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                      <div className="p-5 bg-rose-600/5 rounded-3xl border border-rose-600/10 hover:bg-rose-600/10 transition-colors group">
+                        <h4 className="text-xs font-black text-rose-500 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
                           <AlertCircle size={14} /> Potential Risks
                         </h4>
-                        <ul className="space-y-2">
+                        <ul className="space-y-3">
                           {dailyBrief.risks.map((item, i) => (
-                            <li key={i} className="flex items-center gap-2 text-slate-300 text-sm font-medium">
-                              <span className="text-red-500">•</span> {item}
+                            <li key={i} className="flex items-start gap-3 text-slate-300 text-sm font-semibold group-hover:text-white transition-colors">
+                              <div className="w-1.5 h-1.5 rounded-full bg-rose-500 mt-1.5 flex-shrink-0" />
+                              {item}
                             </li>
                           ))}
                         </ul>
                       </div>
                     </div>
 
-                    <div className="mt-6 space-y-3">
-                      <h4 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-2">Health Tips</h4>
+                    <div className="mt-8 space-y-4">
+                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] pl-1">Clinical Insight Tips</p>
                       {dailyBrief.tips.map((tip, i) => <InsightCard key={i} type="tip" text={tip} />)}
                     </div>
                   </>
                 ) : (
-                  <div className="py-20 text-center">
-                    <button onClick={fetchDailyBrief} className="px-6 py-2 bg-blue-600 text-white rounded-xl font-bold">Generate Daily Brief</button>
+                  <div className="py-20 text-center bg-slate-900/40 rounded-3xl border border-dashed border-slate-800">
+                    <Calendar size={48} className="mx-auto text-slate-700 mb-4" />
+                    <h3 className="text-xl font-bold text-white mb-2">No Daily Protocol Found</h3>
+                    <p className="text-slate-500 mb-6 max-w-xs mx-auto">Get a personalized daily schedule and interaction analysis by generating a brief.</p>
+                    <button 
+                      onClick={() => fetchDailyBrief(true)} 
+                      className="px-8 py-3 bg-blue-600 text-white rounded-2xl font-bold shadow-xl shadow-blue-600/20 hover:scale-105 transition-all"
+                    >
+                      Generate My Brief
+                    </button>
                   </div>
                 )}
               </CoachCard>
@@ -306,78 +347,115 @@ const AICoach = () => {
 
           {activeTab === 'insights' && (
             <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-slate-900/50 border border-slate-800 rounded-3xl p-6 flex items-center gap-4">
-                  <div className="p-3 bg-orange-500/10 rounded-2xl text-orange-500">
-                    <Sparkles size={28} />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-slate-900/50 backdrop-blur-md border border-slate-800 rounded-[2.5rem] p-8 flex items-center gap-6"
+                >
+                  <div className="p-4 bg-orange-500/10 rounded-3xl text-orange-500 shadow-inner">
+                    <Sparkles size={32} />
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Current Streak</p>
-                    <h3 className="text-3xl font-black text-white">{habitsAnalysis?.streakCount || 0} days</h3>
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-1">Consistency Streak</p>
+                    <h3 className="text-4xl font-black text-white">{habitsAnalysis?.streakCount || 0}<span className="text-xl text-slate-400 ml-1">days</span></h3>
                   </div>
-                </div>
-                <div className="bg-slate-900/50 border border-slate-800 rounded-3xl p-6 flex items-center gap-4">
-                  <div className="p-3 bg-blue-500/10 rounded-2xl text-blue-500">
-                    <TrendingUp size={28} />
+                </motion.div>
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 }}
+                  className="bg-slate-900/50 backdrop-blur-md border border-slate-800 rounded-[2.5rem] p-8 flex items-center gap-6"
+                >
+                  <div className="p-4 bg-blue-500/10 rounded-3xl text-blue-500 shadow-inner">
+                    <TrendingUp size={32} />
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Longest Streak</p>
-                    <h3 className="text-3xl font-black text-white">{habitsAnalysis?.longestStreak || 0} days</h3>
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-1">Personal Record</p>
+                    <h3 className="text-4xl font-black text-white">{habitsAnalysis?.longestStreak || 0}<span className="text-xl text-slate-400 ml-1">days</span></h3>
                   </div>
-                </div>
+                </motion.div>
               </div>
 
-              <CoachCard title="Weekly Habits Analysis" icon={TrendingUp}>
-                {habitsAnalysis ? (
+              <CoachCard 
+                title="Weekly Habits Analysis" 
+                icon={TrendingUp}
+                extra={habitsAnalysis && (
+                  <button 
+                    onClick={() => fetchHabits(true)} 
+                    disabled={isAnalyzingHabits}
+                    className="p-2 text-slate-400 hover:text-white transition-all disabled:opacity-50"
+                  >
+                    <RefreshCw size={18} className={isAnalyzingHabits ? 'animate-spin text-blue-500' : ''} />
+                  </button>
+                )}
+              >
+                {isAnalyzingHabits ? (
+                  <div className="py-20 flex flex-col items-center">
+                    <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4" />
+                    <p className="text-slate-400 font-medium">Analyzing behavioral patterns...</p>
+                  </div>
+                ) : habitsAnalysis ? (
                   <>
                     <div className="space-y-4">
-                      {habitsAnalysis.insights.map((insight, i) => (
+                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] pl-1">Pattern Detections</p>
+                      {habitsAnalysis.insights?.map((insight, i) => (
                         <InsightCard key={i} type="trend" text={insight} />
                       ))}
                     </div>
                     
-                    <div className="mt-8 p-6 bg-blue-600/10 border border-blue-600/20 rounded-2xl">
-                      <h4 className="text-lg font-bold text-white mb-2">Improvement Plan</h4>
-                      <p className="text-slate-300 leading-relaxed font-medium">{habitsAnalysis.improvement_plan}</p>
-                    </div>
-
-                    <div className="mt-6 flex items-center gap-4 p-4 bg-slate-800/50 rounded-2xl border border-slate-700">
-                      <div className="p-3 bg-blue-600 rounded-xl">
-                        <TrendingUp size={24} className="text-white" />
+                    <div className="mt-8 p-8 bg-gradient-to-br from-blue-600/10 to-indigo-600/5 border border-blue-600/20 rounded-[2rem] relative overflow-hidden">
+                      <div className="absolute top-0 right-0 p-8 text-blue-500/10 rotate-12">
+                        <TrendingUp size={120} />
                       </div>
-                      <p className="text-slate-200 font-bold">{habitsAnalysis.streak_info}</p>
+                      <h4 className="text-xl font-bold text-white mb-3">Improvement Strategy</h4>
+                      <p className="text-slate-300 leading-relaxed font-medium relative z-10">{habitsAnalysis.improvement_plan}</p>
                     </div>
 
-                    <div className="mt-8 p-6 bg-slate-900/50 border border-slate-800 rounded-3xl">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 bg-amber-500/10 rounded-xl text-amber-500">
-                            <Bell size={20} />
-                          </div>
-                          <div>
-                            <h4 className="text-white font-bold">Smart Notifications</h4>
-                            <p className="text-slate-400 text-xs mt-0.5">Never miss a dose with AI-timed reminders.</p>
-                          </div>
-                        </div>
-                        <button
-                          onClick={async () => {
-                            if ('Notification' in window) {
-                              const permission = await Notification.requestPermission();
-                              if (permission === 'granted') {
-                                toast.success('Smart Notifications enabled!');
-                              }
+                    <div className="mt-8 flex items-center gap-5 p-6 bg-slate-800/40 rounded-3xl border border-slate-700/50">
+                      <div className="p-4 bg-blue-600 text-white rounded-2xl shadow-lg shadow-blue-600/20">
+                        <Bot size={28} />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-1">Coach Sentiment</p>
+                        <p className="text-slate-200 font-bold text-lg">{habitsAnalysis.streak_info}</p>
+                      </div>
+                    </div>
+
+                    <div className="mt-8 p-8 bg-slate-900/60 border border-slate-800 rounded-[2rem] flex flex-col md:flex-row items-center gap-6">
+                      <div className="p-4 bg-amber-500/10 rounded-2xl text-amber-500">
+                        <Bell size={28} />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="text-lg font-bold text-white mb-1">Adaptive Notifications</h4>
+                        <p className="text-slate-400 text-sm">We've adjusted your reminder windows based on your performance patterns.</p>
+                      </div>
+                      <button
+                        onClick={async () => {
+                          if ('Notification' in window) {
+                            const permission = await Notification.requestPermission();
+                            if (permission === 'granted') {
+                              toast.success('Adaptive Notifications enabled!');
                             }
-                          }}
-                          className="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-bold shadow-lg hover:bg-blue-700 transition-colors"
-                        >
-                          Enable Now
-                        </button>
-                      </div>
+                          }
+                        }}
+                        className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold shadow-xl shadow-blue-600/20 transition-all whitespace-nowrap"
+                      >
+                        Enable Notifications
+                      </button>
                     </div>
                   </>
                 ) : (
-                  <div className="py-20 text-center">
-                    <button onClick={fetchHabits} className="px-6 py-2 bg-blue-600 text-white rounded-xl font-bold">Analyze My Habits</button>
+                  <div className="py-20 text-center bg-slate-900/40 rounded-3xl border border-dashed border-slate-800">
+                    <TrendingUp size={48} className="mx-auto text-slate-700 mb-4" />
+                    <h1 className="text-xl font-bold text-white mb-2">Behavioral Analysis Ready</h1>
+                    <p className="text-slate-500 mb-6 max-w-xs mx-auto">Click below to analyze your adherence history and generate a custom improvement plan.</p>
+                    <button 
+                      onClick={() => fetchHabits(true)} 
+                      className="px-8 py-3 bg-blue-600 text-white rounded-2xl font-bold shadow-xl shadow-blue-600/20 hover:scale-105 transition-all"
+                    >
+                      Process My Habits
+                    </button>
                   </div>
                 )}
               </CoachCard>
