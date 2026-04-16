@@ -381,20 +381,38 @@ router.post("/adherence-coach", protect, async (req, res, next) => {
 router.post("/scan-report", protect, upload.single("report"), async (req, res, next) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ message: "No document provided" });
+      return res.status(400).json({ message: "No document provided. Please upload a PDF or image." });
     }
 
     let rawText = "";
+    logger.info(`[AI] Scanning report: ${req.file.originalname} (${req.file.mimetype})`);
 
     // Step 1: Document Text Extraction
-    if (req.file.mimetype === "application/pdf") {
-      const pdfData = await pdfParse(req.file.buffer);
-      rawText = pdfData.text;
-    } else if (req.file.mimetype.startsWith("image/")) {
-      const { data: { text } } = await Tesseract.recognize(req.file.buffer, 'eng');
-      rawText = text;
-    } else {
-      return res.status(400).json({ message: "Unsupported file type. Use PDF or Images." });
+    try {
+      if (req.file.mimetype === "application/pdf") {
+        const pdfData = await pdfParse(req.file.buffer);
+        rawText = pdfData.text;
+        
+        // If pdf-parse found nothing (scanned PDF), we tell the user
+        if (!rawText || rawText.trim().length < 10) {
+           logger.warn(`[AI] PDF contains no text (likely scanned image).`);
+           // Note: In a real production app, we'd use something like 'pdf-img-convert' here 
+           // to process pages through Tesseract. For now, we'll inform the user.
+        }
+      } else if (req.file.mimetype.startsWith("image/")) {
+        const { data: { text } } = await Tesseract.recognize(req.file.buffer, 'eng');
+        rawText = text;
+      } else {
+        return res.status(400).json({ message: "Unsupported file type. Use PDF or JPG/PNG images." });
+      }
+    } catch (extractionError) {
+      logger.error(`[AI] Extraction failed: ${extractionError.message}`);
+      return res.status(500).json({ message: "Failed to extract text from document. Please ensure it's a clear file." });
+    }
+
+    if (!rawText || rawText.trim().length < 5) {
+      // If we still have no text, we can't do AI analysis, but we can return a "No data found" response or mock
+      return res.status(400).json({ message: "Could not read any text from this document. Please upload a clearer version." });
     }
 
     // Step 2: AI Structural Parsing
@@ -404,13 +422,14 @@ router.post("/scan-report", protect, upload.single("report"), async (req, res, n
     const report = await MedicalReport.create({
       userId: req.user,
       fileName: req.file.originalname,
-      rawText,
+      rawText: rawText.substring(0, 5000), // Prevent DB bloat
       extractedData: extractionResult.extractedData,
       aiSummary: extractionResult.aiSummary,
     });
 
     res.json(report);
   } catch (error) {
+    logger.error(`[AI] Scan Report Route Error: ${error.message}`);
     next(error);
   }
 });

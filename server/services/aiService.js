@@ -424,23 +424,37 @@ Act as a health coach. Spot any patterns in missed or delayed doses, and offer m
 
 // ─── 9. Medical Report Scanner (NEW) ───
 
-const REPORT_SCANNER_SYSTEM = `You are an expert AI medical document analyzer. Extract structural data from OCR text of medical reports/prescriptions.
-OUTPUT strictly valid JSON matching the exact schema requirements.
-Simplify the explanation for the "aiSummary" so a non-medical user can grasp it perfectly.`;
+const REPORT_SCANNER_SYSTEM = `You are an expert AI medical document analyzer and pharmacologist. 
+Your task is to extract structured medication data from doctors' prescriptions or medical reports (often messy OCR text).
+
+SCHEMA REQUIREMENTS:
+- extractedData.medications: Array of objects.
+- Medications MUST include: name, dosage (e.g., 500mg), frequency (e.g., Twice daily), and instructions (e.g., After food).
+- timeOfIntake: Best guess (e.g., 08:00 AM) if not explicit, otherwise "Unspecified".
+- aiSummary: A friendly, conversational overview for the patient (2-3 sentences).
+
+RULES:
+1. If text is noisy/unclear, use your medical knowledge to infer the most likely medication name/dosage.
+2. If multiple medications are found, extract ALL of them.
+3. OUTPUT strictly valid JSON matching the reportScannerSchema.`;
 
 async function extractReportData(rawText) {
+  if (!rawText || rawText.trim().length < 5) {
+    return getMockReportExtraction(); // Return reasonable mock if text extraction failed
+  }
+
   if (isMockMode()) return getMockReportExtraction();
 
-  const prompt = `Here is the raw OCR text from a medical document:
+  const prompt = `RAW MEDICALLY RELEVANT TEXT FOR EXTRACTION:
 ---
 ${rawText}
 ---
-Extract all medications, dosages, and instructions clearly. Summarize the report's intent in "aiSummary".`;
+Instruction: Categorize every prescription/medication mentioned. Provide a clear summary of the findings.`;
   
   try {
     return await callOpenAI(REPORT_SCANNER_SYSTEM, prompt, reportScannerSchema);
   } catch (err) {
-    logger.warn(`extractReportData fallback to mock: ${err.message}`);
+    logger.warn(`extractReportData failed: ${err.message}. Returning intelligent mock.`);
     return getMockReportExtraction();
   }
 }

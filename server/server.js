@@ -1,4 +1,4 @@
-require("dotenv").config();
+ require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
@@ -41,16 +41,23 @@ app.use(helmet({
 // Rate Limiting — separate limits for AI-heavy endpoints
 const generalLimiter = rateLimit({
   windowMs: 10 * 60 * 1000,
-  max: 200,
+  max: 500,
   message: { message: "Too many requests from this IP, please try again later." }
 });
 const aiLimiter = rateLimit({
   windowMs: 5 * 60 * 1000,
-  max: 30,
+  max: 100,
   message: { message: "AI rate limit reached. Please wait a few minutes." }
 });
 
+const coachLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000,
+  max: 50, // 50 requests per minute for chat
+  message: { message: "Coach is a bit busy. Please wait a moment." }
+});
+
 app.use("/api", generalLimiter);
+app.use("/api/ai/coach", coachLimiter);
 app.use("/api/ai", aiLimiter);
 
 // Note: express-mongo-sanitize, xss-clean, hpp all removed
