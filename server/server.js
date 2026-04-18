@@ -25,7 +25,10 @@ const app = express();
 app.use(cors({
   origin: process.env.NODE_ENV === 'production'
     ? process.env.FRONTEND_URL
-    : true,   // allow any origin in dev
+    : function (origin, callback) {
+        // Allow any origin in development (handles all Vite ports: 5173, 5174, etc.)
+        callback(null, true);
+      },
   credentials: true
 }));
 
