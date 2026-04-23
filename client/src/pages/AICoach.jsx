@@ -47,7 +47,7 @@ const AICoach = () => {
 
   const fetchHistory = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/ai/coach/history', {
+      const response = await axios.get('/api/ai/coach/history', {
         headers: { Authorization: `Bearer ${user?.token}` }
       });
       if (response.data && response.data.messages) {
@@ -68,8 +68,8 @@ const AICoach = () => {
       
       // Use helper to handle different axios method signatures
       const response = method === 'get'
-        ? await axios.get('http://localhost:5000/api/ai/coach/daily-brief', config)
-        : await axios.post('http://localhost:5000/api/ai/coach/daily-brief', {}, config);
+        ? await axios.get('/api/ai/coach/daily-brief', config)
+        : await axios.post('/api/ai/coach/daily-brief', {}, config);
       setDailyBrief(response.data);
       if (regenerate) toast.success('Daily brief updated!');
     } catch (err) {
@@ -90,8 +90,8 @@ const AICoach = () => {
         longestStreak: Number(user?.longestStreak || 0)
       };
       const response = method === 'get'
-        ? await axios.get('http://localhost:5000/api/ai/coach/analyze-habits', config)
-        : await axios.post('http://localhost:5000/api/ai/coach/analyze-habits', body, config);
+        ? await axios.get('/api/ai/coach/analyze-habits', config)
+        : await axios.post('/api/ai/coach/analyze-habits', body, config);
       setHabitsAnalysis(response.data);
       if (regenerate) toast.success('Health habits analyzed!');
     } catch (err) {
@@ -112,7 +112,7 @@ const AICoach = () => {
     setLoading(true);
 
     try {
-      const response = await axios.post('http://localhost:5000/api/ai/coach/chat', 
+      const response = await axios.post('/api/ai/coach/chat', 
         { message: input, mood },
         { headers: { Authorization: `Bearer ${user?.token}` } }
       );

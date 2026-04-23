@@ -17,7 +17,7 @@ const Profile = () => {
   const [userForm, setUserForm] = useState({ displayName: '', email: '', currentPassword: '', newPassword: '' });
   const [healthForm, setHealthForm] = useState({ age: '', weight: '', gender: '', conditions: '', allergies: '' });
 
-  const api = axios.create({ baseURL: 'http://localhost:5000/api', headers: { Authorization: `Bearer ${user?.token}` } });
+  const api = axios.create({ baseURL: '/api', headers: { Authorization: `Bearer ${user?.token}` } });
 
   useEffect(() => {
     fetchProfile();

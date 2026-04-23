@@ -19,7 +19,7 @@ const ChatAssistant = () => {
 
   useEffect(() => {
     if (isOpen && user) {
-      axios.get('http://localhost:5000/api/medications', {
+      axios.get('/api/medications', {
         headers: { Authorization: `Bearer ${user.token}` }
       }).then(res => setMeds(res.data)).catch(console.error);
     }
@@ -51,7 +51,7 @@ const ChatAssistant = () => {
         conditions: []
       };
 
-      const { data } = await axios.post('http://localhost:5000/api/ai/chat', payload, {
+      const { data } = await axios.post('/api/ai/chat', payload, {
         headers: { Authorization: `Bearer ${user.token}` }
       });
 

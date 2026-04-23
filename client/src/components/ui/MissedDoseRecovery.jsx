@@ -14,7 +14,7 @@ const MissedDoseRecovery = ({ medication, onClose }) => {
   const fetchAdvice = async () => {
     setLoading(true);
     try {
-      const { data } = await axios.post('http://localhost:5000/api/ai/missed-dose', {
+      const { data } = await axios.post('/api/ai/missed-dose', {
         medicationId: medication._id,
         hoursLate,
       }, {

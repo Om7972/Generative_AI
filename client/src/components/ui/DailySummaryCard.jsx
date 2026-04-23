@@ -16,7 +16,7 @@ const DailySummaryCard = () => {
 
   const fetchSummary = async () => {
     try {
-      const { data } = await axios.get('http://localhost:5000/api/ai/daily-summary', {
+      const { data } = await axios.get('/api/ai/daily-summary', {
         headers: { Authorization: `Bearer ${user.token}` },
       });
       setSummary(data);

@@ -68,7 +68,7 @@ const Dashboard = () => {
 
   const fetchMedications = async () => {
     try {
-      const { data } = await axios.get('http://localhost:5000/api/medications', {
+      const { data } = await axios.get('/api/medications', {
         headers: { Authorization: `Bearer ${user.token}` }
       });
       setMedications(data);
@@ -81,7 +81,7 @@ const Dashboard = () => {
 
   const fetchHistory = async () => {
     try {
-      const { data } = await axios.get('http://localhost:5000/api/ai/history', {
+      const { data } = await axios.get('/api/ai/history', {
         headers: { Authorization: `Bearer ${user.token}` }
       });
       setHistoryLogs(data);
@@ -99,7 +99,7 @@ const Dashboard = () => {
   // Fetch AI Risk Score
   const fetchRiskScore = async () => {
     try {
-      const { data } = await axios.post('http://localhost:5000/api/ai/risk-score', {}, {
+      const { data } = await axios.post('/api/ai/risk-score', {}, {
         headers: { Authorization: `Bearer ${user.token}` }
       });
       setRiskData(data);
@@ -118,7 +118,7 @@ const Dashboard = () => {
   // Mark medication as taken
   const markAsTaken = async (medId) => {
     try {
-      await axios.post('http://localhost:5000/api/ai/mark-taken', { medicationId: medId }, {
+      await axios.post('/api/ai/mark-taken', { medicationId: medId }, {
         headers: { Authorization: `Bearer ${user.token}` }
       });
       toast.success('Medication marked as taken!');
@@ -144,10 +144,10 @@ const Dashboard = () => {
     try {
       const config = { headers: { Authorization: `Bearer ${user.token}` } };
       if (currentMed) {
-        await axios.put(`http://localhost:5000/api/medications/${currentMed._id}`, formData, config);
+        await axios.put(`/api/medications/${currentMed._id}`, formData, config);
         toast.success('Medication updated');
       } else {
-        await axios.post('http://localhost:5000/api/medications', formData, config);
+        await axios.post('/api/medications', formData, config);
         toast.success('Medication added');
       }
       fetchMedications();
@@ -160,7 +160,7 @@ const Dashboard = () => {
   const handleDelete = async (id) => {
     if(!window.confirm('Are you sure you want to delete this medication?')) return;
     try {
-      await axios.delete(`http://localhost:5000/api/medications/${id}`, {
+      await axios.delete(`/api/medications/${id}`, {
         headers: { Authorization: `Bearer ${user.token}` }
       });
       toast.success('Medication removed');
@@ -183,7 +183,7 @@ const Dashboard = () => {
         conditions: profile.conditions ? profile.conditions.split(',').map(s => s.trim()) : [],
         allergies: profile.allergies ? profile.allergies.split(',').map(s => s.trim()) : [],
       };
-      const { data } = await axios.post('http://localhost:5000/api/ai/full-analysis', payload, {
+      const { data } = await axios.post('/api/ai/full-analysis', payload, {
         headers: { Authorization: `Bearer ${user.token}` }
       });
       
@@ -218,7 +218,7 @@ const Dashboard = () => {
       }
 
       const payload = { email: reminderConfig.email, message: "Weekly Medication schedule has been set up! You have active medications.", type: "setup" };
-      await axios.post('http://localhost:5000/api/reminders/send', payload, {
+      await axios.post('/api/reminders/send', payload, {
         headers: { Authorization: `Bearer ${user.token}` }
       });
 

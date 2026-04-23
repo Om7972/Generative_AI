@@ -66,7 +66,7 @@ const HealthSimulationLab = () => {
 
   const fetchInitialData = async () => {
     try {
-      const { data } = await axios.get('http://localhost:5000/api/medications', {
+      const { data } = await axios.get('/api/medications', {
         headers: { Authorization: `Bearer ${user.token}` }
       });
       setMedications(data);
@@ -83,7 +83,7 @@ const HealthSimulationLab = () => {
   const runSimulation = async (isBaseline = false) => {
     setLoading(true);
     try {
-      const { data } = await axios.post('http://localhost:5000/api/ai/simulate-health', {
+      const { data } = await axios.post('/api/ai/simulate-health', {
         medications: scenarioMeds
       }, {
         headers: { Authorization: `Bearer ${user.token}` }

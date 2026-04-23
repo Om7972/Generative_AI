@@ -71,7 +71,7 @@ const ReportScanner = () => {
     formData.append('report', file);
 
     try {
-      const { data } = await axios.post('http://localhost:5000/api/ai/scan-report', formData, {
+      const { data } = await axios.post('/api/ai/scan-report', formData, {
         headers: { 
           Authorization: `Bearer ${user.token}`,
           'Content-Type': 'multipart/form-data'
@@ -90,7 +90,7 @@ const ReportScanner = () => {
   const handleSaveMedications = async () => {
     try {
       for (const med of extractedMeds) {
-        await axios.post('http://localhost:5000/api/medications', med, {
+        await axios.post('/api/medications', med, {
           headers: { Authorization: `Bearer ${user.token}` }
         });
       }

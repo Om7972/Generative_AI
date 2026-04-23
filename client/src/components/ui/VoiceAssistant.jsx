@@ -82,7 +82,7 @@ const VoiceAssistant = () => {
   const handleAIQuery = async (text) => {
     setLoading(true);
     try {
-      const { data } = await axios.post('http://localhost:5000/api/ai/chat', {
+      const { data } = await axios.post('/api/ai/chat', {
         question: text,
         medications: [],
         age: null,

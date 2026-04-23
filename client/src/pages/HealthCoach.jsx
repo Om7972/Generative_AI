@@ -110,7 +110,7 @@ const HealthCoach = () => {
 
   const fetchCoaching = async () => {
     try {
-      const response = await axios.post('http://localhost:5000/api/ai/adherence-coach', {}, {
+      const response = await axios.post('/api/ai/adherence-coach', {}, {
         headers: { Authorization: `Bearer ${user.token}` }
       });
       setData(response.data);
