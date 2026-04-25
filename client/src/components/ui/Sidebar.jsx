@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Brain, User, HeartPulse, ChevronLeft, ChevronRight,
@@ -37,29 +37,33 @@ const Sidebar = ({ collapsed, setCollapsed, mobileOpen, setMobileOpen }) => {
       {/* Logo */}
       <div className={`flex items-center ${collapsed ? 'justify-center' : 'justify-between'} px-4 py-5 border-b border-slate-200/50 dark:border-slate-800/50`}>
         {!collapsed && (
-          <motion.div
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="flex items-center gap-2.5"
-          >
+          <Link to="/">
+            <motion.div
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="flex items-center gap-2.5 cursor-pointer"
+            >
+              <motion.div
+                whileHover={{ rotate: 15, scale: 1.1 }}
+                className="p-1.5 bg-gradient-to-br from-primary-500 to-primary-600 text-white rounded-xl shadow-md shadow-primary-500/20"
+              >
+                <HeartPulse size={20} />
+              </motion.div>
+              <span className="font-black text-lg text-slate-800 dark:text-white tracking-tight">
+                Medi<span className="text-primary-600 dark:text-primary-400">Guide</span>
+              </span>
+            </motion.div>
+          </Link>
+        )}
+        {collapsed && (
+          <Link to="/">
             <motion.div
               whileHover={{ rotate: 15, scale: 1.1 }}
-              className="p-1.5 bg-gradient-to-br from-primary-500 to-primary-600 text-white rounded-xl shadow-md shadow-primary-500/20"
+              className="p-1.5 bg-gradient-to-br from-primary-500 to-primary-600 text-white rounded-xl shadow-md shadow-primary-500/20 cursor-pointer"
             >
               <HeartPulse size={20} />
             </motion.div>
-            <span className="font-black text-lg text-slate-800 dark:text-white tracking-tight">
-              Medi<span className="text-primary-600 dark:text-primary-400">Guide</span>
-            </span>
-          </motion.div>
-        )}
-        {collapsed && (
-          <motion.div
-            whileHover={{ rotate: 15, scale: 1.1 }}
-            className="p-1.5 bg-gradient-to-br from-primary-500 to-primary-600 text-white rounded-xl shadow-md shadow-primary-500/20"
-          >
-            <HeartPulse size={20} />
-          </motion.div>
+          </Link>
         )}
         <button
           onClick={() => setCollapsed?.(!collapsed)}

@@ -14,6 +14,29 @@ const ScenarioEditor = ({ scenarioMeds, setScenarioMeds }) => {
     setScenarioMeds(scenarioMeds.filter((_, i) => i !== index));
   };
 
+  const formatTimeForInput = (timeStr) => {
+    if (!timeStr) return '';
+    const lower = timeStr.toLowerCase();
+    if (lower.includes('morning')) return '08:00';
+    if (lower.includes('afternoon')) return '14:00';
+    if (lower.includes('evening') || lower.includes('night')) return '20:00';
+    
+    const match = timeStr.match(/(\d{1,2}):?(\d{2})?\s*(am|pm)?/i);
+    if (match) {
+      let [ , hours, minutes, period ] = match;
+      hours = parseInt(hours, 10);
+      minutes = minutes || '00';
+      if (period) {
+        period = period.toLowerCase();
+        if (period === 'pm' && hours < 12) hours += 12;
+        if (period === 'am' && hours === 12) hours = 0;
+      }
+      return `${hours.toString().padStart(2, '0')}:${minutes}`;
+    }
+    return '';
+  };
+
+
   return (
     <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
       {scenarioMeds.map((med, index) => (
@@ -58,7 +81,7 @@ const ScenarioEditor = ({ scenarioMeds, setScenarioMeds }) => {
               </label>
               <input
                 type="time"
-                value={med.timeOfIntake.replace(/ A| P|a|p|m|M/g, '').trim()} // Simplified mapping from 08:00 AM to valid time
+                value={formatTimeForInput(med.timeOfIntake)}
                 onChange={(e) => updateMed(index, 'timeOfIntake', e.target.value)}
                 className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 dark:text-slate-200 font-semibold focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none transition"
               />

@@ -53,9 +53,9 @@ const Navbar = ({ onMobileMenuToggle }) => {
               </button>
             )}
 
-            {(!showFullNav || !user) && (
+            <div className={showFullNav && user ? "lg:hidden" : ""}>
               <Link
-                to={user ? '/dashboard' : '/'}
+                to="/"
                 className="flex items-center gap-2.5 font-black text-xl text-slate-800 dark:text-white tracking-tight group"
               >
                 <motion.div
@@ -71,7 +71,7 @@ const Navbar = ({ onMobileMenuToggle }) => {
                   <span className="text-[10px] ml-1 font-bold text-slate-400 dark:text-slate-500 tracking-widest">AI</span>
                 </span>
               </Link>
-            )}
+            </div>
 
             {showFullNav && (
               <div className="hidden md:block">
