@@ -14,10 +14,10 @@ const groqClient = new OpenAI({
 });
 
 const coachResponseSchema = z.object({
-  message: z.string(),
-  tips: z.array(z.string()),
-  warnings: z.array(z.string()),
-  motivation: z.string(),
+  message: z.any().transform(v => typeof v === 'string' ? v : (v?.message || JSON.stringify(v))),
+  tips: z.array(z.any()).transform(arr => arr.map(a => typeof a === 'string' ? a : JSON.stringify(a))),
+  warnings: z.array(z.any()).transform(arr => arr.map(a => typeof a === 'string' ? a : JSON.stringify(a))),
+  motivation: z.any().transform(v => typeof v === 'string' ? v : (v?.motivation || JSON.stringify(v))),
 });
 
 const isMockMode = () => 
@@ -152,11 +152,11 @@ async function generateDailyBriefing(userId) {
   }
 
   const briefSchema = z.object({
-    title: z.string(),
-    summary: z.string(),
-    schedule_highlights: z.array(z.string()),
-    risks: z.array(z.string()),
-    tips: z.array(z.string()),
+    title: z.any().transform(v => typeof v === 'string' ? v : (v?.title || JSON.stringify(v))),
+    summary: z.any().transform(v => typeof v === 'string' ? v : (v?.summary || JSON.stringify(v))),
+    schedule_highlights: z.array(z.any()).transform(arr => arr.map(a => typeof a === 'string' ? a : JSON.stringify(a))),
+    risks: z.array(z.any()).transform(arr => arr.map(a => typeof a === 'string' ? a : JSON.stringify(a))),
+    tips: z.array(z.any()).transform(arr => arr.map(a => typeof a === 'string' ? a : JSON.stringify(a))),
   });
 
   const parsed = await callChatAI(systemPrompt, "Generate my daily health briefing.", briefSchema);
@@ -228,11 +228,11 @@ async function analyzeHabits(userId) {
   }
 
   const habitSchema = z.object({
-    insights: z.array(z.string()),
-    improvement_plan: z.string(),
-    streak_info: z.string(),
-    streakCount: z.number(),
-    longestStreak: z.number(),
+    insights: z.array(z.any()).transform(arr => arr.map(a => typeof a === 'string' ? a : JSON.stringify(a))),
+    improvement_plan: z.any().transform(v => typeof v === 'string' ? v : (v?.message || v?.plan || JSON.stringify(v) || "Keep up the good work!")),
+    streak_info: z.any().transform(v => typeof v === 'string' ? v : (v?.message || v?.info || JSON.stringify(v) || "Consistency is key.")),
+    streakCount: z.coerce.number().catch(user?.streakCount || 0),
+    longestStreak: z.coerce.number().catch(user?.longestStreak || 0),
   });
 
   return await callChatAI(systemPrompt, "Analyze my health habits.", habitSchema);
