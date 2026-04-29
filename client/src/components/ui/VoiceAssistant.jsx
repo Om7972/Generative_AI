@@ -12,75 +12,95 @@ const VoiceAssistant = () => {
   const [loading, setLoading] = useState(false);
   const [showPanel, setShowPanel] = useState(false);
   const [error, setError] = useState('');
-  const recognitionRef = useRef(null);
+  
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
 
   useEffect(() => {
-    // Initialize Web Speech API
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (SpeechRecognition) {
-      const recognition = new SpeechRecognition();
-      recognition.continuous = false;
-      recognition.interimResults = true;
-      recognition.lang = 'en-US';
-
-      recognition.onresult = (event) => {
-        let finalTranscript = '';
-        let interimTranscript = '';
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          const t = event.results[i][0].transcript;
-          if (event.results[i].isFinal) {
-            finalTranscript += t;
-          } else {
-            interimTranscript += t;
-          }
-        }
-        setTranscript(finalTranscript || interimTranscript);
-
-        if (finalTranscript) {
-          handleAIQuery(finalTranscript);
-        }
-      };
-
-      recognition.onerror = (event) => {
-        setError(`Speech recognition error: ${event.error}`);
-        setIsListening(false);
-      };
-
-      recognition.onend = () => {
-        setIsListening(false);
-      };
-
-      recognitionRef.current = recognition;
-    }
-
     return () => {
-      if (recognitionRef.current) {
-        try { recognitionRef.current.abort(); } catch(e) {}
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+        mediaRecorderRef.current.stop();
       }
     };
   }, []);
 
-  const toggleListening = () => {
-    if (!recognitionRef.current) {
-      setError('Speech recognition is not supported in your browser.');
-      return;
-    }
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          audioChunksRef.current.push(e.data);
+        }
+      };
 
-    if (isListening) {
-      recognitionRef.current.stop();
-      setIsListening(false);
-    } else {
+      recorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        audioChunksRef.current = [];
+        stream.getTracks().forEach(track => track.stop());
+        await handleTranscription(audioBlob);
+      };
+      
+      audioChunksRef.current = [];
+      recorder.start();
+      mediaRecorderRef.current = recorder;
+      
+      setIsListening(true);
+      setShowPanel(true);
       setTranscript('');
       setAiResponse('');
       setError('');
+    } catch (err) {
+      console.error("Microphone access error:", err);
+      setError('Microphone access denied or unavailable.');
       setShowPanel(true);
-      recognitionRef.current.start();
-      setIsListening(true);
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      mediaRecorderRef.current.stop();
+      setIsListening(false);
+    }
+  };
+
+  const toggleListening = () => {
+    if (isListening) {
+      stopRecording();
+    } else {
+      startRecording();
+    }
+  };
+
+  const handleTranscription = async (audioBlob) => {
+    setLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append('audio', audioBlob, 'audio.webm');
+      
+      const { data } = await axios.post('/api/ai/transcribe', formData, {
+        headers: { 
+          'Content-Type': 'multipart/form-data',
+          Authorization: `Bearer ${user.token}` 
+        }
+      });
+      
+      if (data.text) {
+        setTranscript(data.text);
+        await handleAIQuery(data.text);
+      } else {
+        setError('Could not understand audio. Please try again.');
+        setLoading(false);
+      }
+    } catch (err) {
+      console.error("Transcription error:", err);
+      setError('Speech recognition failed. Please try again.');
+      setLoading(false);
     }
   };
 
   const handleAIQuery = async (text) => {
-    setLoading(true);
     try {
       const { data } = await axios.post('/api/ai/chat', {
         question: text,
@@ -143,7 +163,7 @@ const VoiceAssistant = () => {
                   <span className="text-violet-200 text-[10px] font-medium">Speak naturally about your medications</span>
                 </div>
               </div>
-              <button onClick={() => { setShowPanel(false); if(isListening) recognitionRef.current?.stop(); }}
+              <button onClick={() => { setShowPanel(false); stopRecording(); }}
                 className="text-white/60 hover:text-white p-1 hover:bg-white/10 rounded-lg transition"
               >
                 <X size={16} />
@@ -164,7 +184,7 @@ const VoiceAssistant = () => {
                       <div className="absolute inset-[-4px] rounded-full border-2 border-danger-300 animate-ping opacity-20 [animation-delay:0.5s]" />
                     </div>
                     <p className="text-xs font-bold text-danger-600 dark:text-danger-400 animate-pulse uppercase tracking-widest">
-                      Listening...
+                      Recording... (Tap to stop)
                     </p>
                   </div>
                 ) : loading ? (

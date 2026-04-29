@@ -655,6 +655,8 @@ function getMockReportExtraction() {
 }
 
 module.exports = {
+  openai,
+  groqClient,
   generateFullAnalysis,
   generateChatResponse,
   calculateRiskScore,

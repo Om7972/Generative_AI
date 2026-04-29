@@ -20,6 +20,34 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 const router = express.Router();
 
+// ─── Transcribe Audio ───
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const { v4: uuidv4 } = require('uuid');
+
+router.post("/transcribe", protect, upload.single("audio"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ message: "Audio file is required" });
+
+    const ext = req.file.mimetype.split("/")[1] || "webm";
+    const tempFilePath = path.join(os.tmpdir(), `${uuidv4()}.${ext}`);
+    fs.writeFileSync(tempFilePath, req.file.buffer);
+
+    const transcription = await aiService.groqClient.audio.transcriptions.create({
+      file: fs.createReadStream(tempFilePath),
+      model: "whisper-large-v3",
+    });
+
+    fs.unlinkSync(tempFilePath); // Cleanup
+
+    res.json({ text: transcription.text });
+  } catch (error) {
+    logger.error(`Transcription error: ${error.message}`);
+    res.status(500).json({ message: "Failed to transcribe audio" });
+  }
+});
+
 // ─── Full Analysis ───
 /**
  * @swagger

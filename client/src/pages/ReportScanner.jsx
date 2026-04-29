@@ -88,17 +88,33 @@ const ReportScanner = () => {
   };
 
   const handleSaveMedications = async () => {
-    try {
-      for (const med of extractedMeds) {
+    let successCount = 0;
+    let conflictCount = 0;
+    let errorCount = 0;
+
+    for (const med of extractedMeds) {
+      try {
         await axios.post('/api/medications', med, {
           headers: { Authorization: `Bearer ${user.token}` }
         });
+        successCount++;
+      } catch (err) {
+        if (err.response?.status === 409) {
+          conflictCount++;
+        } else {
+          errorCount++;
+        }
       }
-      toast.success('Medications added correctly!');
+    }
+    
+    if (successCount > 0) toast.success(`Successfully added ${successCount} medication(s).`);
+    if (conflictCount > 0) toast.error(`${conflictCount} medication(s) already exist and were skipped.`);
+    if (errorCount > 0) toast.error(`Failed to save ${errorCount} medication(s).`);
+
+    // Only clear if we didn't encounter critical errors
+    if (errorCount === 0) {
       setScannedReport(null);
       setExtractedMeds([]);
-    } catch (err) {
-      toast.error('Failed saving medications.');
     }
   };
 
