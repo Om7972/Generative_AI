@@ -106,14 +106,14 @@ const HealthInsights = () => {
   const [generating, setGenerating] = useState(false);
   const [errorLine, setErrorLine] = useState('');
 
-  const api = axios.create({ baseURL: `${axios.defaults.baseURL || ''}/api`, headers: { Authorization: `Bearer ${user?.token}` } });
+  const api = axios.create({ baseURL: axios.defaults.baseURL || '', headers: { Authorization: `Bearer ${user?.token}` } });
 
   useEffect(() => {
     const init = async () => {
       try {
         const [medRes, profileRes] = await Promise.all([
-          api.get('/medications'),
-          api.get('/profile'),
+          api.get('/api/medications'),
+          api.get('/api/profile'),
         ]);
         setMedications(medRes.data);
         setHealthProfile(profileRes.data.healthProfile);
@@ -137,7 +137,7 @@ const HealthInsights = () => {
     setErrorLine('');
     setAnalysis(null);
     try {
-      const { data } = await api.post('/ai/full-analysis', {
+      const { data } = await api.post('/api/ai/full-analysis', {
         age: healthProfile.age,
         weight: healthProfile.weight,
         gender: healthProfile.gender,

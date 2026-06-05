@@ -18,7 +18,7 @@ const Profile = () => {
   const [userForm, setUserForm] = useState({ displayName: '', email: '', currentPassword: '', newPassword: '' });
   const [healthForm, setHealthForm] = useState({ age: '', weight: '', height: '', gender: '', conditions: '', allergies: '' });
 
-  const api = axios.create({ baseURL: `${axios.defaults.baseURL || ''}/api`, headers: { Authorization: `Bearer ${user?.token}` } });
+  const api = axios.create({ baseURL: axios.defaults.baseURL || '', headers: { Authorization: `Bearer ${user?.token}` } });
 
   useEffect(() => {
     fetchProfile();
@@ -27,7 +27,7 @@ const Profile = () => {
 
   const fetchProfile = async () => {
     try {
-      const { data } = await api.get('/profile');
+      const { data } = await api.get('/api/profile');
       setUserForm({
         displayName: data.user.displayName || '',
         email: data.user.email || '',
@@ -58,7 +58,7 @@ const Profile = () => {
         payload.currentPassword = userForm.currentPassword;
         payload.newPassword = userForm.newPassword;
       }
-      await api.put('/profile/user', payload);
+      await api.put('/api/profile/user', payload);
       setUserForm(prev => ({ ...prev, currentPassword: '', newPassword: '' }));
       toast.success('Account settings saved!');
     } catch (err) {
@@ -72,7 +72,7 @@ const Profile = () => {
     e.preventDefault();
     setSavingHealth(true);
     try {
-      await api.put('/profile/health', {
+      await api.put('/api/profile/health', {
         age: healthForm.age ? parseInt(healthForm.age) : null,
         weight: healthForm.weight ? parseFloat(healthForm.weight) : null,
         height: healthForm.height ? parseFloat(healthForm.height) : null,
