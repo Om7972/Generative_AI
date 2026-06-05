@@ -87,6 +87,11 @@ app.use("/api/reminders", reminderRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/ai/coach", aiCoachRoutes);
 
+// Root endpoint
+app.get("/", (req, res) => {
+  res.send("MediGuide AI Backend API is running successfully. Access API Docs at /api-docs or check Health at /api/health");
+});
+
 // Health check
 app.get("/api/health", (req, res) => {
   res.json({
