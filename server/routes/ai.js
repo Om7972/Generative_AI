@@ -428,7 +428,9 @@ router.post("/scan-report", protect, upload.single("report"), async (req, res, n
            // to process pages through Tesseract. For now, we'll inform the user.
         }
       } else if (req.file.mimetype.startsWith("image/")) {
-        const { data: { text } } = await Tesseract.recognize(req.file.buffer, 'eng');
+        const { data: { text } } = await Tesseract.recognize(req.file.buffer, 'eng', {
+          cachePath: os.tmpdir()
+        });
         rawText = text;
       } else {
         return res.status(400).json({ message: "Unsupported file type. Use PDF or JPG/PNG images." });

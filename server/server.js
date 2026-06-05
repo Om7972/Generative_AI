@@ -107,14 +107,18 @@ app.get("/api/health", (req, res) => {
 app.use(errorHandler);
 
 // ── Database ──
-mongoose
-  .connect(process.env.MONGODB_URI)
-  .then(() => {
-    logger.info("Connected securely to MongoDB");
-    // Initialize cron jobs after DB connection
-    initCronJobs();
-  })
-  .catch((err) => logger.error(`MongoDB Connect Failure: ${err.message}`));
+if (process.env.MONGODB_URI) {
+  mongoose
+    .connect(process.env.MONGODB_URI)
+    .then(() => {
+      logger.info("Connected securely to MongoDB");
+      // Initialize cron jobs after DB connection
+      initCronJobs();
+    })
+    .catch((err) => logger.error(`MongoDB Connect Failure: ${err.message}`));
+} else {
+  logger.error("Database connection skipped: MONGODB_URI environment variable is not defined.");
+}
 
 const PORT = process.env.PORT || 5000;
 if (require.main === module) {
