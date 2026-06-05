@@ -17,6 +17,7 @@ const userSchema = new mongoose.Schema(
     streakCount: { type: Number, default: 0 },
     longestStreak: { type: Number, default: 0 },
     lastAdherenceDate: { type: String, default: null }, // YYYY-MM-DD
+    isAdmin: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

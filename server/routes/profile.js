@@ -89,7 +89,7 @@ router.put("/user", protect, async (req, res, next) => {
  */
 router.put("/health", protect, async (req, res, next) => {
   try {
-    const { age, weight, gender, conditions, allergies } = req.body;
+    const { age, weight, height, gender, conditions, allergies } = req.body;
 
     let healthProfile = await HealthProfile.findOne({ user: req.user });
     if (!healthProfile) {
@@ -98,9 +98,18 @@ router.put("/health", protect, async (req, res, next) => {
 
     if (age !== undefined) healthProfile.age = age;
     if (weight !== undefined) healthProfile.weight = weight;
+    if (height !== undefined) healthProfile.height = height;
     if (gender !== undefined) healthProfile.gender = gender;
     if (conditions !== undefined) healthProfile.conditions = conditions;
     if (allergies !== undefined) healthProfile.allergies = allergies;
+
+    // Auto-calculate BMI
+    if (healthProfile.weight && healthProfile.height) {
+      const heightInMeters = healthProfile.height / 100;
+      healthProfile.bmi = parseFloat((healthProfile.weight / (heightInMeters * heightInMeters)).toFixed(2));
+    } else {
+      healthProfile.bmi = null;
+    }
 
     await healthProfile.save();
     res.json(healthProfile);

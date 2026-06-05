@@ -3,7 +3,7 @@ import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 // eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
-import { User, Shield, Save, Eye, EyeOff, Heart, Weight, Calendar, AlertCircle, CheckCircle } from 'lucide-react';
+import { User, Shield, Save, Eye, EyeOff, Heart, Weight, Calendar, AlertCircle, CheckCircle, Ruler } from 'lucide-react';
 import toast from 'react-hot-toast';
 import FloatingInput, { FloatingTextarea, FloatingSelect } from '../components/ui/FloatingInput';
 
@@ -16,7 +16,7 @@ const Profile = () => {
   const [showNewPw, setShowNewPw] = useState(false);
 
   const [userForm, setUserForm] = useState({ displayName: '', email: '', currentPassword: '', newPassword: '' });
-  const [healthForm, setHealthForm] = useState({ age: '', weight: '', gender: '', conditions: '', allergies: '' });
+  const [healthForm, setHealthForm] = useState({ age: '', weight: '', height: '', gender: '', conditions: '', allergies: '' });
 
   const api = axios.create({ baseURL: '/api', headers: { Authorization: `Bearer ${user?.token}` } });
 
@@ -37,6 +37,7 @@ const Profile = () => {
       setHealthForm({
         age: data.healthProfile.age || '',
         weight: data.healthProfile.weight || '',
+        height: data.healthProfile.height || '',
         gender: data.healthProfile.gender || '',
         conditions: (data.healthProfile.conditions || []).join(', '),
         allergies: (data.healthProfile.allergies || []).join(', '),
@@ -74,6 +75,7 @@ const Profile = () => {
       await api.put('/profile/health', {
         age: healthForm.age ? parseInt(healthForm.age) : null,
         weight: healthForm.weight ? parseFloat(healthForm.weight) : null,
+        height: healthForm.height ? parseFloat(healthForm.height) : null,
         gender: healthForm.gender,
         conditions: healthForm.conditions ? healthForm.conditions.split(',').map(s => s.trim()).filter(Boolean) : [],
         allergies: healthForm.allergies ? healthForm.allergies.split(',').map(s => s.trim()).filter(Boolean) : [],
@@ -193,7 +195,7 @@ const Profile = () => {
           <p className="text-[11px] text-slate-400 mb-5 leading-relaxed">This data powers personalized AI dosage and interaction analysis.</p>
 
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-3">
               <div>
                 <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 flex items-center gap-1"><Calendar size={10} /> Age</label>
                 <input type="number" value={healthForm.age} onChange={e => setHealthForm({ ...healthForm, age: e.target.value })} placeholder="e.g. 45" className="w-full px-3 py-2.5 bg-slate-800/50 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:border-primary-500 outline-none text-xs font-medium transition-colors" />
@@ -201,6 +203,10 @@ const Profile = () => {
               <div>
                 <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 flex items-center gap-1"><Weight size={10} /> Weight (kg)</label>
                 <input type="number" step="0.1" value={healthForm.weight} onChange={e => setHealthForm({ ...healthForm, weight: e.target.value })} placeholder="e.g. 70" className="w-full px-3 py-2.5 bg-slate-800/50 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:border-primary-500 outline-none text-xs font-medium transition-colors" />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 flex items-center gap-1"><Ruler size={10} /> Height (cm)</label>
+                <input type="number" step="0.1" value={healthForm.height} onChange={e => setHealthForm({ ...healthForm, height: e.target.value })} placeholder="e.g. 175" className="w-full px-3 py-2.5 bg-slate-800/50 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:border-primary-500 outline-none text-xs font-medium transition-colors" />
               </div>
             </div>
             <div>
@@ -212,6 +218,52 @@ const Profile = () => {
                 <option value="other">Other</option>
               </select>
             </div>
+
+            {/* BMI Display Card */}
+            {(() => {
+              const w = parseFloat(healthForm.weight);
+              const h = parseFloat(healthForm.height) / 100;
+              if (!w || !h || h <= 0) return null;
+              const bmi = (w / (h * h)).toFixed(1);
+              let category = '';
+              let colorClass = '';
+              let feedback = '';
+              if (bmi < 18.5) {
+                category = 'Underweight';
+                colorClass = 'text-blue-400';
+                feedback = 'Consider consulting a healthcare provider about safe weight gain strategies.';
+              } else if (bmi < 25) {
+                category = 'Normal weight';
+                colorClass = 'text-emerald-400';
+                feedback = 'Healthy weight range. Maintaining this reduces risk of cardiovascular issues.';
+              } else if (bmi < 30) {
+                category = 'Overweight';
+                colorClass = 'text-amber-400';
+                feedback = 'Slightly elevated risk. Focus on balanced nutrition and light regular exercise.';
+              } else {
+                category = 'Obese';
+                colorClass = 'text-rose-400';
+                feedback = 'Higher risk of chronic conditions. We suggest consulting a primary care provider.';
+              }
+
+              return (
+                <div className="p-4 bg-slate-800/40 border border-slate-700/60 rounded-2xl space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                      ⚖️ Body Mass Index (BMI)
+                    </span>
+                    <span className="text-sm font-black text-white">{bmi}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-[11px] font-bold">
+                    <span className="text-slate-400">Category</span>
+                    <span className={colorClass}>{category}</span>
+                  </div>
+                  <p className="text-[10px] text-slate-400 leading-normal font-medium pt-2 border-t border-slate-800">
+                    {feedback}
+                  </p>
+                </div>
+              );
+            })()}
             <div>
               <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Conditions</label>
               <textarea value={healthForm.conditions} onChange={e => setHealthForm({ ...healthForm, conditions: e.target.value })} placeholder="E.g. Hypertension, Diabetes" className="w-full px-3 py-2.5 bg-slate-800/50 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:border-primary-500 outline-none min-h-[55px] text-xs font-medium transition-colors" />

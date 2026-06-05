@@ -5,6 +5,8 @@ const healthProfileSchema = new mongoose.Schema(
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, unique: true, index: true },
     age: { type: Number, default: null },
     weight: { type: Number, default: null },
+    height: { type: Number, default: null },
+    bmi: { type: Number, default: null },
     gender: { type: String, enum: ["male", "female", "other", ""], default: "" },
     conditions: [{ type: String }],
     allergies: [{ type: String }],

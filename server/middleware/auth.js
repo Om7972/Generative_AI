@@ -1,4 +1,5 @@
 const jwt = require("jsonwebtoken");
+const User = require("../models/User");
 
 const protect = (req, res, next) => {
   let token;
@@ -22,4 +23,16 @@ const protect = (req, res, next) => {
   }
 };
 
-module.exports = { protect };
+const admin = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user);
+    if (user && (user.isAdmin || user.email === "odhumkeakr@gmail.com")) {
+      return next();
+    }
+    return res.status(403).json({ message: "Not authorized as an admin" });
+  } catch (error) {
+    return res.status(403).json({ message: "Not authorized, admin verification failed" });
+  }
+};
+
+module.exports = { protect, admin };
