@@ -112,10 +112,12 @@ mongoose
   .catch((err) => logger.error(`MongoDB Connect Failure: ${err.message}`));
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  logger.info(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
-  logger.info(`API Docs: http://localhost:${PORT}/api-docs`);
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    logger.info(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+    logger.info(`API Docs: http://localhost:${PORT}/api-docs`);
+  });
+}
 
 // Graceful shutdown
 process.on("SIGTERM", () => {
