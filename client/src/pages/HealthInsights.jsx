@@ -106,7 +106,7 @@ const HealthInsights = () => {
   const [generating, setGenerating] = useState(false);
   const [errorLine, setErrorLine] = useState('');
 
-  const api = axios.create({ baseURL: '/api', headers: { Authorization: `Bearer ${user?.token}` } });
+  const api = axios.create({ baseURL: `${axios.defaults.baseURL || ''}/api`, headers: { Authorization: `Bearer ${user?.token}` } });
 
   useEffect(() => {
     const init = async () => {
