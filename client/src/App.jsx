@@ -92,7 +92,10 @@ function AppRoutes() {
       )}
 
       {/* Navbar */}
-      <Navbar onMobileMenuToggle={() => setMobileSidebarOpen(!mobileSidebarOpen)} />
+      <Navbar
+        sidebarCollapsed={sidebarCollapsed}
+        onMobileMenuToggle={() => setMobileSidebarOpen(!mobileSidebarOpen)}
+      />
 
       {/* Main content area */}
       <main

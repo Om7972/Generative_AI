@@ -6,7 +6,7 @@ import { useTheme } from '../context/ThemeContext';
 // eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
 
-const Navbar = ({ onMobileMenuToggle }) => {
+const Navbar = ({ onMobileMenuToggle, sidebarCollapsed }) => {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
@@ -33,8 +33,8 @@ const Navbar = ({ onMobileMenuToggle }) => {
     <>
       <nav
         id="main-navbar"
-        className={`fixed top-0 right-0 z-50 h-16 flex items-center transition-all duration-500 ease-in-out ${
-          showFullNav ? 'left-0 lg:left-[240px]' : 'left-0'
+        className={`fixed top-0 right-0 z-50 h-16 flex items-center transition-all duration-300 ease-in-out ${
+          showFullNav ? (sidebarCollapsed ? 'left-0 lg:left-[72px]' : 'left-0 lg:left-[240px]') : 'left-0'
         } ${
           scrolled || !isLanding
             ? 'bg-white/70 dark:bg-slate-900/70 backdrop-blur-2xl border-b border-slate-200/40 dark:border-slate-800/40 shadow-sm'
