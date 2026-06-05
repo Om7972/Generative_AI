@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+// eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
 import { User, Shield, Save, Eye, EyeOff, Heart, Weight, Calendar, AlertCircle, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -21,6 +22,7 @@ const Profile = () => {
 
   useEffect(() => {
     fetchProfile();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchProfile = async () => {

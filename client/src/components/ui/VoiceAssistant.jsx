@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+// eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mic, MicOff, Loader2, Volume2, X, Sparkles } from 'lucide-react';
 import axios from 'axios';
@@ -120,6 +121,7 @@ const VoiceAssistant = () => {
         window.speechSynthesis.speak(utterance);
       }
     } catch (err) {
+      console.error(err);
       setError('Failed to get AI response. Please try again.');
     } finally {
       setLoading(false);

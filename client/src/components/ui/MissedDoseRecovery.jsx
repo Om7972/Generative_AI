@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+// eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
 import { Clock, AlertTriangle, CheckCircle, ArrowRight, Loader2 } from 'lucide-react';
 import axios from 'axios';
@@ -22,6 +23,7 @@ const MissedDoseRecovery = ({ medication, onClose }) => {
       });
       setAdvice(data);
     } catch (err) {
+      console.error(err);
       toast.error('Failed to get missed dose advice');
     } finally {
       setLoading(false);

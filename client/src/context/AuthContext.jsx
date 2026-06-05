@@ -3,19 +3,20 @@ import React, { createContext, useState, useEffect, useContext } from 'react';
 
 const AuthContext = createContext();
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const userInfo = localStorage.getItem('userInfo');
-    if (userInfo) {
-      setUser(JSON.parse(userInfo));
+  const [user, setUser] = useState(() => {
+    try {
+      const userInfo = localStorage.getItem('userInfo');
+      return userInfo ? JSON.parse(userInfo) : null;
+    } catch (err) {
+      console.error('Failed to parse userInfo', err);
+      return null;
     }
-    setLoading(false);
-  }, []);
+  });
+  const [loading] = useState(false);
 
   const login = (userData) => {
     localStorage.setItem('userInfo', JSON.stringify(userData));

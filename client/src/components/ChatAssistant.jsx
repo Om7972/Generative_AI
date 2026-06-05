@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageSquare, X, Send, User, Bot, Loader2, Sparkles } from 'lucide-react';
+// eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
@@ -57,6 +58,7 @@ const ChatAssistant = () => {
 
       setMessages(prev => [...prev, { role: 'ai', content: data.answer }]);
     } catch (err) {
+      console.error(err);
       setMessages(prev => [...prev, { role: 'ai', content: "Sorry, I couldn't reach the server right now." }]);
     } finally {
       setLoading(false);

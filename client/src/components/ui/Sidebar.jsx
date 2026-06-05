@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
+// eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Brain, User, HeartPulse, ChevronLeft, ChevronRight,
@@ -32,7 +33,7 @@ const Sidebar = ({ collapsed, setCollapsed, mobileOpen, setMobileOpen }) => {
         : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white'
     }`;
 
-  const SidebarContent = () => (
+  const renderSidebarContent = () => (
     <div className="flex flex-col h-full">
       {/* Logo */}
       <div className={`flex items-center ${collapsed ? 'justify-center' : 'justify-between'} px-4 py-5 border-b border-slate-200/50 dark:border-slate-800/50`}>
@@ -159,7 +160,7 @@ const Sidebar = ({ collapsed, setCollapsed, mobileOpen, setMobileOpen }) => {
       <aside className={`hidden lg:flex flex-col fixed left-0 top-0 h-screen z-40 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-r border-slate-200/50 dark:border-slate-800/50 transition-all duration-300 ${
         collapsed ? 'w-[72px]' : 'w-[240px]'
       }`}>
-        <SidebarContent />
+        {renderSidebarContent()}
       </aside>
 
       {/* Mobile overlay */}
@@ -180,7 +181,7 @@ const Sidebar = ({ collapsed, setCollapsed, mobileOpen, setMobileOpen }) => {
               transition={{ type: 'spring', damping: 30, stiffness: 300 }}
               className="fixed left-0 top-0 h-screen w-[260px] z-50 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 shadow-2xl lg:hidden"
             >
-              <SidebarContent />
+              {renderSidebarContent()}
             </motion.aside>
           </>
         )}

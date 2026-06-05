@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+// eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Activity, Play, RotateCcw, Save, Zap, AlertTriangle, 
@@ -62,6 +63,7 @@ const HealthSimulationLab = () => {
 
   useEffect(() => {
     fetchInitialData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchInitialData = async () => {
@@ -96,6 +98,7 @@ const HealthSimulationLab = () => {
       }
       toast.success('Simulation generated!');
     } catch(err) {
+      console.error('Simulation error:', err);
       toast.error('Simulation failed. Please try again.');
     } finally {
       setLoading(false);

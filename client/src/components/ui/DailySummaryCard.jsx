@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+// eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sun, Clock, AlertTriangle, TrendingUp, Sparkles, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import axios from 'axios';
@@ -10,11 +11,7 @@ const DailySummaryCard = () => {
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(false);
 
-  useEffect(() => {
-    fetchSummary();
-  }, []);
-
-  const fetchSummary = async () => {
+  const fetchSummary = useCallback(async () => {
     try {
       const { data } = await axios.get('/api/ai/daily-summary', {
         headers: { Authorization: `Bearer ${user.token}` },
@@ -25,7 +22,11 @@ const DailySummaryCard = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user.token]);
+
+  useEffect(() => {
+    fetchSummary();
+  }, [fetchSummary]);
 
   const getRiskColor = (level) => {
     const colors = {
@@ -180,7 +181,7 @@ const DailySummaryCard = () => {
               {/* Tips */}
               {s.tips?.length > 0 && (
                 <div className="mt-3 space-y-1.5">
-                  <p className I="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                  <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
                     <TrendingUp size={10} /> Daily Tips
                   </p>
                   {s.tips.map((tip, i) => (

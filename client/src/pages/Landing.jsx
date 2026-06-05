@@ -1,6 +1,7 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { HeartPulse, Shield, Brain, Calendar, MessageSquare, Activity, ArrowRight, Zap, Clock, CheckCircle2, Sparkles, Star, TrendingUp } from 'lucide-react';
+// eslint-disable-next-line no-unused-vars
 import { motion, useInView } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 
@@ -31,31 +32,43 @@ const Reveal = ({ children, delay = 0, direction = 'up', className = '' }) => {
 };
 
 /* ── Animated particle dots ── */
-const ParticleField = () => (
-  <div className="pointer-events-none absolute inset-0 overflow-hidden">
-    {Array.from({ length: 20 }).map((_, i) => (
-      <motion.div
-        key={i}
-        className="absolute w-1 h-1 rounded-full bg-primary-400/20 dark:bg-primary-400/10"
-        style={{
-          left: `${Math.random() * 100}%`,
-          top: `${Math.random() * 100}%`,
-        }}
-        animate={{
-          y: [0, -30, 0],
-          opacity: [0.2, 0.6, 0.2],
-          scale: [1, 1.5, 1],
-        }}
-        transition={{
-          duration: 3 + Math.random() * 4,
-          delay: Math.random() * 2,
-          repeat: Infinity,
-          ease: 'easeInOut',
-        }}
-      />
-    ))}
-  </div>
-);
+const ParticleField = () => {
+  const [particles] = useState(() => 
+    Array.from({ length: 20 }).map((_, i) => ({
+      id: i,
+      left: `${Math.random() * 100}%`,
+      top: `${Math.random() * 100}%`,
+      duration: 3 + Math.random() * 4,
+      delay: Math.random() * 2,
+    }))
+  );
+
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden">
+      {particles.map((p) => (
+        <motion.div
+          key={p.id}
+          className="absolute w-1 h-1 rounded-full bg-primary-400/20 dark:bg-primary-400/10"
+          style={{
+            left: p.left,
+            top: p.top,
+          }}
+          animate={{
+            y: [0, -30, 0],
+            opacity: [0.2, 0.6, 0.2],
+            scale: [1, 1.5, 1],
+          }}
+          transition={{
+            duration: p.duration,
+            delay: p.delay,
+            repeat: Infinity,
+            ease: 'easeInOut',
+          }}
+        />
+      ))}
+    </div>
+  );
+};
 
 const Landing = () => {
   const { user } = useAuth();
@@ -113,7 +126,7 @@ const Landing = () => {
 
           <Reveal delay={0.1}>
             <h1
-              className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black tracking-tight text-slate-900 dark:text-white leading-[1.05] mb-6"
+              className="text-xl sm:text-4xl md:text-6xl lg:text-6xl font-black tracking-tight text-slate-900 dark:text-white leading-[1.05] mb-6"
               style={{ fontFamily: 'Poppins, sans-serif' }}
             >
               Your Medications,{' '}

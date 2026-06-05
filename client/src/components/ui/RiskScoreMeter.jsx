@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+// eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
 
 const RiskScoreMeter = ({ score = 0, maxScore = 100, size = 140, label = 'Risk Score', severity }) => {

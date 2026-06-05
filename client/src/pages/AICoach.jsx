@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+// eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Send, User, Bot, Sparkles, Calendar, TrendingUp, RefreshCw, 
@@ -35,6 +36,7 @@ const AICoach = () => {
       fetchDailyBrief();
       fetchHabits();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   useEffect(() => {
@@ -120,6 +122,7 @@ const AICoach = () => {
       const aiMsg = { role: 'ai', text: response.data.message, timestamp: new Date() };
       setMessages((prev) => [...prev, aiMsg]);
     } catch (err) {
+      console.error('Chat error:', err);
       toast.error('Coach is currently unavailable.');
     } finally {
       setLoading(false);

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Sparkles, Activity } from 'lucide-react';
+// eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
 
 const SummaryView = ({ aiSummary }) => {

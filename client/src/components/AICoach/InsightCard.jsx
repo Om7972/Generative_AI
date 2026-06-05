@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+
 import { Lightbulb, TrendingUp, AlertCircle } from 'lucide-react';
 
 const InsightCard = ({ type, text }) => {

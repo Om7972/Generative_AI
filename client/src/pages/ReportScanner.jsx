@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+// eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
 import { ScanFace, FileText, CheckCircle2, ChevronRight, Save, Sparkles, Upload } from 'lucide-react';
 import axios from 'axios';

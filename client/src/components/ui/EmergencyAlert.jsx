@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+// eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShieldAlert, Phone, X, AlertTriangle, HeartPulse } from 'lucide-react';
 
@@ -21,9 +22,15 @@ const EmergencyAlert = ({ alert, onDismiss }) => {
     };
   }, []);
 
+  const [prevAlert, setPrevAlert] = useState(null);
+
+  if (alert !== prevAlert) {
+    setPrevAlert(alert);
+    setVisible(true);
+  }
+
   useEffect(() => {
     if (alert && audioUnlocked) {
-      setVisible(true);
       try {
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         const ctx = new AudioContext();
@@ -40,9 +47,9 @@ const EmergencyAlert = ({ alert, onDismiss }) => {
         osc.start();
         osc.stop(ctx.currentTime + 0.5);
         setTimeout(() => ctx.close(), 600);
-      } catch (e) {}
-    } else if (alert) {
-      setVisible(true);
+      } catch (err) {
+        console.error(err);
+      }
     }
   }, [alert, audioUnlocked]);
 

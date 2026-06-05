@@ -6,6 +6,7 @@ import {
   Lightbulb, Activity, Calendar as CalIcon, History, Bell, Mail, Sparkles,
   TrendingUp, ChevronRight, CheckCircle, Mic
 } from 'lucide-react';
+// eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, startOfWeek, addDays, isSameDay } from 'date-fns';
 import toast from 'react-hot-toast';
@@ -28,7 +29,7 @@ import {
 } from '../components/ui';
 import FloatingInput, { FloatingSelect } from '../components/ui/FloatingInput';
 
-export function cn(...inputs) {
+function cn(...inputs) {
   return twMerge(clsx(inputs));
 }
 
@@ -94,6 +95,7 @@ const Dashboard = () => {
     fetchMedications();
     fetchHistory();
     fetchRiskScore();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Fetch AI Risk Score
@@ -124,6 +126,7 @@ const Dashboard = () => {
       toast.success('Medication marked as taken!');
       fetchMedications();
     } catch (err) {
+      console.error('Mark taken error:', err);
       toast.error('Failed to mark as taken');
     }
   };
@@ -199,6 +202,7 @@ const Dashboard = () => {
       fetchHistory();
       toast.success('AI analysis complete');
     } catch (err) {
+      console.error('Guidance error:', err);
       setGuidanceResult({ error: "Failed to generate AI guidance." });
       toast.error('Analysis failed');
     } finally {
@@ -224,6 +228,7 @@ const Dashboard = () => {
 
       toast.success('Reminders configured!');
     } catch(err) {
+      console.error('Configure reminders error:', err);
       toast.error('Failed to configure reminders');
     } finally {
        setSendingReminder(null);

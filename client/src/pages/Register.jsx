@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { HeartPulse, UserPlus, Eye, EyeOff, CheckCircle2, Shield, Sparkles } from 'lucide-react';
+// eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import FloatingInput from '../components/ui/FloatingInput';
@@ -71,6 +72,7 @@ const PasswordStrength = ({ password }) => {
 };
 
 /* ── Feature Badge ── */
+// eslint-disable-next-line no-unused-vars
 const FeatureBadge = ({ icon: Icon, text, delay }) => (
   <motion.div
     initial={{ opacity: 0, y: 10, scale: 0.9 }}

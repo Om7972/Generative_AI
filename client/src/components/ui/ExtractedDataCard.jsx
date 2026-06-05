@@ -1,5 +1,6 @@
 import React from 'react';
 import { Pill, Clock, Edit2 } from 'lucide-react';
+// eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
 
 const ExtractedDataCard = ({ extractedMeds, setExtractedMeds }) => {

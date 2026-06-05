@@ -1,12 +1,13 @@
 import React from 'react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+// eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
 import { TrendingUp } from 'lucide-react';
 
 // Generate sample weekly adherence data
 const generateWeeklyData = (medications = []) => {
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-  return days.map((day, i) => ({
+  return days.map((day) => ({
     day,
     adherence: Math.min(100, Math.max(40, 65 + Math.round(Math.random() * 35))),
     doses: medications.length > 0 ? medications.length : Math.round(2 + Math.random() * 3),

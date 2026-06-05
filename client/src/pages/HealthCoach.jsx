@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+// eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
 import { 
   Flame, Award, Target, CheckCircle2, AlertTriangle, MessageSquare, Zap
@@ -106,6 +107,7 @@ const HealthCoach = () => {
 
   useEffect(() => {
     fetchCoaching();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchCoaching = async () => {
@@ -115,6 +117,7 @@ const HealthCoach = () => {
       });
       setData(response.data);
     } catch(err) {
+      console.error('Coaching fetch error:', err);
       toast.error('Could not load coach insights.');
     } finally {
       setLoading(false);

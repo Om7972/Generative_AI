@@ -1,4 +1,5 @@
 import React from 'react';
+// eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
 import { Pill, Clock, Edit2, Trash2, CheckCircle, AlertTriangle } from 'lucide-react';
 
